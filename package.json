@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@napi-rs/ffmpeg": "^1.7.0",
+    "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0",
     "@whop/api": "^0.0.42",
     "@prisma/client": "^5.18.0",
     "fluent-ffmpeg": "^2.1.3",

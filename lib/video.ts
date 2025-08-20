@@ -1,13 +1,17 @@
 import "server-only";
-import { ffmpegPath, ffprobePath } from "@napi-rs/ffmpeg";
+// Resolve ffmpeg/ffprobe at runtime to avoid bundler rewriting paths
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const ffmpegStatic = require("ffmpeg-static");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const ffprobeStatic = require("ffprobe-static");
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import fs from "fs";
 
 // Configure ffmpeg/ffprobe paths with fallbacks for serverless environments
 // Prefer library-resolved binary paths; fall back to env only if necessary
-const resolvedFfmpeg = ffmpegPath || process.env.FFMPEG_PATH || "ffmpeg";
-const resolvedFfprobe = ffprobePath || process.env.FFPROBE_PATH || "ffprobe";
+const resolvedFfmpeg = (ffmpegStatic as unknown as string) || process.env.FFMPEG_PATH || "ffmpeg";
+const resolvedFfprobe = (ffprobeStatic?.path as string) || process.env.FFPROBE_PATH || "ffprobe";
 ffmpeg.setFfmpegPath(resolvedFfmpeg);
 ffmpeg.setFfprobePath(resolvedFfprobe);
 try {
@@ -15,6 +19,12 @@ try {
   const fp = resolvedFfprobe;
   const ffExists = fs.existsSync(ff);
   const fpExists = fs.existsSync(fp);
+  if (ffExists) {
+    try { fs.chmodSync(ff, 0o755); } catch {}
+  }
+  if (fpExists) {
+    try { fs.chmodSync(fp, 0o755); } catch {}
+  }
   console.log("[ffmpeg] resolved", { ff, ffExists, fp, fpExists });
 } catch {}
 
