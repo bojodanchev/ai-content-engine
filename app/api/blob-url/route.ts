@@ -12,14 +12,8 @@ export async function POST(req: NextRequest) {
     const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN;
     if (!token) return Response.json({ error: "missing blob token" }, { status: 500 });
     const pathname = `uploads/${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`;
-    const { url, token: clientToken } = await generateUploadURL({
-      access: "public",
-      contentType: ct,
-      token,
-      pathname,
-      allowedContentTypes: ["video/*", "application/octet-stream"],
-    });
-    return Response.json({ url, token: clientToken });
+    const { url } = await generateUploadURL({ access: "public", contentType: ct, token, pathname });
+    return Response.json({ url });
   } catch (e: any) {
     console.error("/api/blob-url error", e);
     return Response.json({ error: e?.message ?? "server_error" }, { status: 500 });

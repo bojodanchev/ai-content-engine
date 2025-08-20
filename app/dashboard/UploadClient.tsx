@@ -42,7 +42,11 @@ export default function UploadClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: file.name, contentType: file.type || "application/octet-stream" })
       });
-      if (!pre.ok) throw new Error("Failed to init upload");
+      if (!pre.ok) {
+        let msg = "Failed to init upload";
+        try { const j = await pre.json(); if (j?.error) msg = j.error; } catch {}
+        throw new Error(msg);
+      }
       const { url } = await pre.json();
       const put = await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
       if (!put.ok) throw new Error("Direct upload failed");
