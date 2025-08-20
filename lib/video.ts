@@ -1,12 +1,12 @@
 import "server-only";
-import ffmpegPath from "@ffmpeg-installer/ffmpeg";
+import ffmpegStatic from "ffmpeg-static";
 import ffprobeStatic from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import fs from "fs";
 
-ffmpeg.setFfmpegPath(ffmpegPath.path);
-ffmpeg.setFfprobePath(ffprobeStatic.path);
+ffmpeg.setFfmpegPath(ffmpegStatic as unknown as string);
+ffmpeg.setFfprobePath((ffprobeStatic as any).path);
 
 export async function extractMetadata(filePath: string): Promise<Record<string, any>> {
   return new Promise((resolve, reject) => {
