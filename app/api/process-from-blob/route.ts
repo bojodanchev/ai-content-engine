@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
   const { blobUrl, title, comment, creation_time } = await req.json();
   if (!blobUrl) return new Response("Missing blobUrl", { status: 400 });
 
-  const res = await fetch(blobUrl, { headers: { Authorization: `Bearer ${process.env.VERCEL_BLOB_READ_WRITE_TOKEN ?? ""}` } });
+  const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN || "";
+  const res = await fetch(blobUrl, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok || !res.body) return new Response("Fetch blob failed", { status: 400 });
 
   const dataDir = process.env.DATA_DIR || (process.env.VERCEL ? "/tmp/ace-storage" : path.join(process.cwd(), "var", "storage"));
