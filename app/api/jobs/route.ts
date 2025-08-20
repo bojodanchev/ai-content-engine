@@ -93,8 +93,16 @@ export async function POST(req: NextRequest) {
         await db.job.update({ where: { id: jobId }, data: { status: "completed", outputFilename: path.basename(outputPath), metaJson: JSON.stringify({ before: beforeMeta, after: afterMeta, preset }), updatedAt: new Date() } });
         return Response.json({ ok: true, completed: true });
       } catch (e: any) {
-        await db.job.update({ where: { id: jobId }, data: { status: "failed", metaJson: JSON.stringify({ error: e?.message || String(e) }), updatedAt: new Date() } });
-        return Response.json({ ok: false, error: "ffmpeg_failed", details: e?.message || String(e) }, { status: 500 });
+        const errObj = {
+          message: e?.message || String(e),
+          exitCode: e?.exitCode ?? null,
+          stderr: e?.stderr ?? null,
+          stdout: e?.stdout ?? null,
+          bin: e?.bin ?? null,
+          args: Array.isArray(e?.args) ? e.args : null,
+        } as const;
+        await db.job.update({ where: { id: jobId }, data: { status: "failed", metaJson: JSON.stringify({ error: errObj }), updatedAt: new Date() } });
+        return Response.json({ ok: false, error: "ffmpeg_failed", ...errObj }, { status: 500 });
       }
     }
 
