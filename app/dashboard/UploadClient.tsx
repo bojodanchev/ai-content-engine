@@ -54,6 +54,13 @@ export default function UploadClient() {
       if (!url) throw new Error("Invalid upload init response");
 
       // 2) PUT directly to S3
+      // Preflight diagnostic (server asks S3 OPTIONS and returns headers)
+      try {
+        const diag = await fetch("/api/debug/s3-cors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url, origin: window.location.origin, headers: ["content-type"] }) });
+        const info = await diag.json().catch(() => ({}));
+        console.log("[S3-CORS-DIAG]", info);
+      } catch {}
+
       const s3Res = await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
       if (!s3Res.ok) {
         let body = "";
