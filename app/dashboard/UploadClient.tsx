@@ -37,19 +37,15 @@ export default function UploadClient() {
     }
     setIsSubmitting(true);
     try {
-      // 1) Get blob upload URL
-      const pre = await fetch("/api/blob-url", {
+      // Use official client-side upload handler endpoint
+      const up = await fetch(`/api/blob-upload?pathname=${encodeURIComponent(file.name)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, contentType: file.type || "application/octet-stream" })
+        body: file,
+        headers: { "content-type": file.type || "application/octet-stream" },
       });
-      if (!pre.ok) throw new Error("Failed to init upload");
-      const { url } = await pre.json();
-
-      // 2) Upload file directly to Vercel Blob
-      const put = await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
-      if (!put.ok) throw new Error("Direct upload failed");
-      const blobUrl = put.headers.get("location") || url;
+      if (!up.ok) throw new Error("Failed to init upload");
+      const uploadRes = await up.json();
+      const blobUrl = uploadRes.url || uploadRes.pathname || uploadRes.location;
 
       // 3) Ask server to process from blob URL
       const res = await fetch("/api/process-from-blob", {
