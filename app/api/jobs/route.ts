@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const sessionId = cookies().get("ace_session_id")?.value;
   const sessionUser = sessionId ? getSessionUser(sessionId) : null;
   const fallbackUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
-  const effectiveUserId = sessionUser?.userId || fallbackUserId;
+  const effectiveUserId = String((sessionUser?.userId || fallbackUserId || "")).trim();
   
   if (!effectiveUserId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const sessionId = cookies().get("ace_session_id")?.value;
   const sessionUser = sessionId ? getSessionUser(sessionId) : null;
   const fallbackUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
-  const effectiveUserId = sessionUser?.userId || fallbackUserId;
+  const effectiveUserId = String((sessionUser?.userId || fallbackUserId || "")).trim();
   
   if (!effectiveUserId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     if (!jobId) return Response.json({ error: "jobId required" }, { status: 400 });
 
     const db = getDb();
-    const job = await db.job.findUnique({ where: { id: jobId, userId: effectiveUserId } });
+    const job = await db.job.findFirst({ where: { id: jobId, userId: effectiveUserId } });
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
     await db.job.update({ where: { id: jobId }, data: { status: "queued" } });

@@ -69,6 +69,7 @@ export default function UploadClient() {
       }
       setJobId(jid);
       setStatus("File uploaded to S3. Ready to process.");
+      console.log("[UPLOAD-INIT]", { jobId: jid, url });
     } catch (e: any) {
       setError(e.message ?? "Upload failed");
     } finally {
