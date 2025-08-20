@@ -1,15 +1,15 @@
 import { NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/session";
-import { cookies } from "next/headers";
+import { cookies } from "next/server";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import { getDb } from "@/lib/db";
-import { runFfmpegWithMetadata, extractMetadata } from "@/lib/video";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const maxDuration = 60; // allow longer ffmpeg runs on Vercel
+export const maxDuration = 60;
+export const preferredRegion = ["iad1", "cle1", "sfo1"];
 
 export async function POST(req: NextRequest) {
   const sessionId = cookies().get("ace_session_id")?.value;
@@ -28,60 +28,56 @@ export async function POST(req: NextRequest) {
   const file = formData.get("file") as File | null;
   if (!file) return new Response("File missing", { status: 400 });
 
-  const title = (formData.get("title") as string) || undefined;
-  const comment = (formData.get("comment") as string) || undefined;
-  const creation_time = (formData.get("creation_time") as string) || undefined;
-
   const dataDir = process.env.DATA_DIR || (process.env.VERCEL ? "/tmp/ace-storage" : path.join(process.cwd(), "var", "storage"));
   fs.mkdirSync(dataDir, { recursive: true });
 
-  const inputId = crypto.randomUUID();
-  const inputPath = path.join(dataDir, `${inputId}_${file.name}`);
-  const arrayBuffer = await file.arrayBuffer();
+  const jobId = crypto.randomUUID();
+  const inputPath = path.join(dataDir, `${jobId}_input${path.extname(file.name)}`);
+  
   try {
+    const arrayBuffer = await file.arrayBuffer();
     fs.writeFileSync(inputPath, Buffer.from(arrayBuffer));
   } catch (e) {
     console.error("[upload] write file failed", e);
     return new Response("Write failed", { status: 500 });
   }
 
-  const jobId = crypto.randomUUID();
+  // Create job record with status "queued"
   const db = getDb();
-  const beforeMeta = await extractMetadata(inputPath).catch(() => null);
-  db.prepare("INSERT INTO jobs (id, user_id, input_filename, status, meta_json) VALUES (?, ?, ?, ?, ?)").run(
-    jobId,
-    effectiveUserId,
-    path.basename(inputPath),
-    "queued",
-    JSON.stringify({ before: beforeMeta })
-  );
-
-  // Process synchronously for now for simplicity
   try {
-    const { outputPath } = await runFfmpegWithMetadata(inputPath, {
-      title,
-      comment,
-      creation_time,
+    await db.user.upsert({
+      where: { id: effectiveUserId },
+      update: {},
+      create: { id: effectiveUserId, username: null, avatarUrl: null },
     });
-    const afterMeta = await extractMetadata(outputPath).catch(() => null);
-    db.prepare("UPDATE jobs SET status=?, output_filename=?, updated_at=datetime('now'), meta_json=? WHERE id=?").run(
-      "completed",
-      path.basename(outputPath),
-      JSON.stringify({ before: beforeMeta, after: afterMeta }),
-      jobId
-    );
+    
+    await db.job.create({
+      data: {
+        id: jobId,
+        userId: effectiveUserId,
+        inputFilename: path.basename(inputPath),
+        status: "queued",
+        metaJson: JSON.stringify({ 
+          originalName: file.name,
+          size: file.size,
+          type: file.type,
+          uploadedAt: new Date().toISOString()
+        })
+      }
+    });
   } catch (e) {
-    console.error("[upload] ffmpeg failed", e);
-    db.prepare("UPDATE jobs SET status=?, updated_at=datetime('now') WHERE id=?").run("failed", jobId);
-    if (req.headers.get("x-requested-with") === "XMLHttpRequest") {
-      return Response.json({ ok: false, error: "ffmpeg_failed" }, { status: 500 });
-    }
-    return new Response("Processing failed", { status: 500 });
+    console.error("[upload] database error", e);
+    // Clean up file if db insert failed
+    try { fs.unlinkSync(inputPath); } catch {}
+    return new Response("Database error", { status: 500 });
   }
-  if (req.headers.get("x-requested-with") === "XMLHttpRequest") {
-    return Response.json({ ok: true });
-  }
-  return Response.redirect(`/dashboard`);
+
+  // Return jobId for frontend to poll status
+  return Response.json({ 
+    ok: true, 
+    jobId,
+    message: "File uploaded successfully. Processing will begin shortly."
+  });
 }
 
 

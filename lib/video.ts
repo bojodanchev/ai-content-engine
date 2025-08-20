@@ -4,7 +4,7 @@ import "server-only";
 const ffmpegStatic = require("ffmpeg-static");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ffprobeStatic = require("ffprobe-static");
-import ffmpeg from "fluent-ffmpeg";
+import { spawn } from "node:child_process";
 import path from "path";
 import fs from "fs";
 
@@ -12,8 +12,7 @@ import fs from "fs";
 // Prefer library-resolved binary paths; fall back to env only if necessary
 const resolvedFfmpeg = (ffmpegStatic as unknown as string) || "/var/task/node_modules/ffmpeg-static/ffmpeg" || "ffmpeg";
 const resolvedFfprobe = (ffprobeStatic?.path as string) || "/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe" || "ffprobe";
-ffmpeg.setFfmpegPath(resolvedFfmpeg);
-ffmpeg.setFfprobePath(resolvedFfprobe);
+// fluent-ffmpeg removed; we will spawn binaries directly
 try {
   const ff = resolvedFfmpeg;
   const fp = resolvedFfprobe;
@@ -29,12 +28,9 @@ try {
 } catch {}
 
 export async function extractMetadata(filePath: string): Promise<Record<string, any>> {
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(filePath, (err, data) => {
-      if (err) return reject(err);
-      resolve(data as any);
-    });
-  });
+  const args = ["-v", "error", "-show_format", "-show_streams", "-print_format", "json", filePath];
+  const res = await run(resolvedFfprobe, args);
+  try { return JSON.parse(res.stdout || "{}"); } catch { return {}; }
 }
 
 type MetaOverrides = {
@@ -46,53 +42,53 @@ type MetaOverrides = {
 export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOverrides) {
   const dir = path.dirname(inputPath);
   const base = path.basename(inputPath, path.extname(inputPath));
-  const outputPath = path.join(dir, `${base}_processed.mp4`);
-  // 1) Try fast metadata-only rewrite (copy streams)
+  const ext = path.extname(inputPath).toLowerCase();
+  const container: "mp4" | "mov" | "webm" = ext === ".webm" ? "webm" : ext === ".mov" ? "mov" : "mp4";
+  const outputPath = path.join(dir, `${base}_processed${ext || ".mp4"}`);
+  const metaArgsBase = [
+    "-y", "-i", inputPath,
+    "-map", "0",
+    "-c", "copy",
+    "-map_metadata", "-1",
+    "-metadata", `title=${overrides.title ?? "AI Content Engine export"}`,
+    "-metadata", `comment=${overrides.comment ?? `job_id=${Date.now()}`}`,
+    "-metadata", `creation_time=${overrides.creation_time ?? new Date().toISOString()}`,
+  ];
+  const copyArgs = container === "webm" ? [...metaArgsBase, outputPath] : [...metaArgsBase, "-movflags", "use_metadata_tags+faststart", outputPath];
   try {
-    await new Promise<void>((resolve, reject) => {
-      let cmd = ffmpeg(inputPath)
-        .outputOptions([
-          "-y",
-          "-map_metadata 0",
-          `-metadata unique_id=${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          `-metadata encoder=AI-Content-Engine`,
-          "-movflags +faststart",
-          "-c copy",
-        ]);
-      if (overrides.title) cmd = cmd.outputOptions([`-metadata title=${overrides.title}`]);
-      if (overrides.comment) cmd = cmd.outputOptions([`-metadata comment=${overrides.comment}`]);
-      if (overrides.creation_time) cmd = cmd.outputOptions([`-metadata creation_time=${overrides.creation_time}`]);
-      cmd.on("end", () => resolve()).on("error", reject).save(outputPath);
-    });
-    if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) {
-      return { outputPath };
-    }
+    await run(resolvedFfmpeg, copyArgs);
+    if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) return { outputPath };
   } catch (e) {
     console.log("[ffmpeg] copy failed, will transcode", (e as any)?.message || e);
   }
-
-  // 2) Fallback to light transcode to force uniqueness
-  await new Promise<void>((resolve, reject) => {
-    let command = ffmpeg(inputPath)
-      .outputOptions([
-        "-y",
-        "-movflags +faststart",
-        "-pix_fmt yuv420p",
-        `-metadata unique_id=${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        `-metadata encoder=AI-Content-Engine`,
-        "-map_metadata 0",
-      ])
-      .videoCodec("libx264")
-      .audioCodec("aac");
-
-    if (overrides.title) command = command.outputOptions([`-metadata title=${overrides.title}`]);
-    if (overrides.comment) command = command.outputOptions([`-metadata comment=${overrides.comment}`]);
-    if (overrides.creation_time) command = command.outputOptions([`-metadata creation_time=${overrides.creation_time}`]);
-
-    command.on("end", () => resolve()).on("error", reject).save(outputPath);
-  });
-
+  const transcodeArgs = [
+    "-y", "-i", inputPath,
+    "-map_metadata", "-1",
+    "-metadata", `title=${overrides.title ?? "AI Content Engine export"}`,
+    "-metadata", `comment=${overrides.comment ?? `job_id=${Date.now()}`}`,
+    "-metadata", `creation_time=${overrides.creation_time ?? new Date().toISOString()}`,
+    ...(container === "webm" ? [] : ["-movflags", "use_metadata_tags+faststart"]),
+    "-pix_fmt", "yuv420p",
+    "-c:v", "libx264",
+    "-c:a", "aac",
+    outputPath,
+  ];
+  await run(resolvedFfmpeg, transcodeArgs);
   return { outputPath };
+}
+
+async function run(bin: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(bin, args);
+    let stdout = ""; let stderr = "";
+    child.stdout?.on("data", d => stdout += String(d));
+    child.stderr?.on("data", d => stderr += String(d));
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve({ stdout, stderr });
+      else reject(new Error(stderr || `exit ${code}`));
+    });
+  });
 }
 
 

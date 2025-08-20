@@ -1,15 +1,16 @@
 "use client";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-// no client helper; use pre-signed PUT URLs only
 
 export default function UploadClient() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  // metadata fields are auto-generated server-side for best UX
   const [isDragging, setIsDragging] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>("");
 
   const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -28,36 +29,82 @@ export default function UploadClient() {
     }
   }, []);
 
-  const submit = async () => {
+  const uploadFile = async () => {
     setError(null);
     if (!file) {
       setError("Select a video first");
       return;
     }
-    setIsSubmitting(true);
+    setIsUploading(true);
     try {
-      // Direct multipart to server (reliable path)
+      // Step 1: Upload file and get jobId
       const fd = new FormData();
       fd.append("file", file);
-      const up = await fetch("/api/upload-direct", {
+      const uploadRes = await fetch("/api/upload", {
         method: "POST",
         body: fd,
-        headers: { "X-Requested-With": "XMLHttpRequest" },
       });
-      if (!up.ok) {
-        let msg = `Upload failed (${up.status})`;
-        try { const j = await up.json(); if (j?.error) msg = j.error; } catch {}
+      
+      if (!uploadRes.ok) {
+        let msg = `Upload failed (${uploadRes.status})`;
+        try { const j = await uploadRes.json(); if (j?.error) msg = j.error; } catch {}
         throw new Error(msg);
       }
-      // Refresh Jobs list
-      router.refresh();
-      setFile(null);
-      // metadata is auto-set server-side; nothing to reset
+      
+      const uploadData = await uploadRes.json();
+      setJobId(uploadData.jobId);
+      setStatus("File uploaded successfully. Ready to process.");
+      
     } catch (e: any) {
       setError(e.message ?? "Upload failed");
     } finally {
-      setIsSubmitting(false);
+      setIsUploading(false);
     }
+  };
+
+  const startProcessing = async () => {
+    if (!jobId) return;
+    
+    setIsProcessing(true);
+    setError(null);
+    
+    try {
+      // Step 2: Trigger processing
+      const processRes = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, preset: "default" })
+      });
+      
+      if (!processRes.ok) {
+        let msg = `Processing failed (${processRes.status})`;
+        try { const j = await processRes.json(); if (j?.error) msg = j.error; } catch {}
+        throw new Error(msg);
+      }
+      
+      const processData = await processRes.json();
+      setStatus("Processing completed successfully!");
+      
+      // Refresh the page to show the new job
+      setTimeout(() => {
+        router.refresh();
+        setFile(null);
+        setJobId(null);
+        setStatus("");
+      }, 2000);
+      
+    } catch (e: any) {
+      setError(e.message ?? "Processing failed");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFile(null);
+    setJobId(null);
+    setStatus("");
+    setError(null);
   };
 
   return (
@@ -84,17 +131,39 @@ export default function UploadClient() {
         )}
       </div>
 
-      {/* metadata inputs removed; handled automatically on server */}
-
       {error && <div className="text-sm text-red-400">{error}</div>}
+      
+      {status && (
+        <div className="text-sm text-green-400 bg-green-400/10 p-3 rounded-lg">
+          {status}
+        </div>
+      )}
 
-      <button
-        onClick={submit}
-        disabled={!file || isSubmitting}
-        className="w-fit rounded-xl px-4 py-2.5 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-400 text-black font-semibold disabled:opacity-50 hover:opacity-90 transition"
-      >
-        {isSubmitting ? "Processing…" : "Generate Unique Metadata"}
-      </button>
+      {!jobId ? (
+        <button
+          onClick={uploadFile}
+          disabled={!file || isUploading}
+          className="w-fit rounded-xl px-4 py-2.5 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-400 text-black font-semibold disabled:opacity-50 hover:opacity-90 transition"
+        >
+          {isUploading ? "Uploading…" : "Upload Video"}
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <button
+            onClick={startProcessing}
+            disabled={isProcessing}
+            className="w-fit rounded-xl px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-400 text-black font-semibold disabled:opacity-50 hover:opacity-90 transition"
+          >
+            {isProcessing ? "Processing…" : "Start Processing"}
+          </button>
+          <button
+            onClick={resetForm}
+            className="w-fit rounded-xl px-4 py-2.5 border border-white/15 bg-white/5 hover:bg-white/10 transition text-sm"
+          >
+            Start Over
+          </button>
+        </div>
+      )}
     </div>
   );
 }
