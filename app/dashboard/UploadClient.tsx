@@ -39,17 +39,31 @@ export default function UploadClient() {
     }
     setIsUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
-      if (!uploadRes.ok) {
-        let msg = `Upload failed (${uploadRes.status})`;
-        try { const j = await uploadRes.json(); if (j?.error) msg = j.error; } catch {}
+      // 1) Ask server for presigned S3 POST + jobId
+      const initRes = await fetch("/api/uploads/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name, contentType: file.type || "application/octet-stream" })
+      });
+      if (!initRes.ok) {
+        let msg = `Init failed (${initRes.status})`;
+        try { const j = await initRes.json(); if (j?.error) msg = j.error; } catch {}
         throw new Error(msg);
       }
-      const uploadData = await uploadRes.json();
-      setJobId(uploadData.jobId);
-      setStatus("File uploaded successfully. Ready to process.");
+      const { jobId: jid, upload } = await initRes.json();
+      if (!upload?.url || !upload?.fields) throw new Error("Invalid upload init response");
+
+      // 2) POST directly to S3 (multipart/form-data with policy fields)
+      const form = new FormData();
+      Object.entries(upload.fields).forEach(([k, v]) => form.append(k, v as string));
+      form.append("Content-Type", file.type || "application/octet-stream");
+      form.append("file", file);
+      const s3Res = await fetch(upload.url, { method: "POST", body: form });
+      if (!s3Res.ok) {
+        throw new Error(`S3 upload failed (${s3Res.status})`);
+      }
+      setJobId(jid);
+      setStatus("File uploaded to S3. Ready to process.");
     } catch (e: any) {
       setError(e.message ?? "Upload failed");
     } finally {

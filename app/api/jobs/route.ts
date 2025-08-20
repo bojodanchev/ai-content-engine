@@ -2,8 +2,7 @@ import { NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/session";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
-import path from "path";
-import fs from "fs";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,7 +23,7 @@ export async function GET(req: NextRequest) {
     const jobs = await db.job.findMany({
       where: { userId: effectiveUserId },
       orderBy: { createdAt: "desc" },
-      take: 50 // Limit to recent jobs
+      take: 50
     });
 
     return Response.json({ jobs });
@@ -34,7 +33,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/jobs - Create a new job (trigger processing)
+// POST /api/jobs - Enqueue processing job
 export async function POST(req: NextRequest) {
   const sessionId = cookies().get("ace_session_id")?.value;
   const sessionUser = sessionId ? getSessionUser(sessionId) : null;
@@ -47,107 +46,27 @@ export async function POST(req: NextRequest) {
 
   try {
     const { jobId, preset = "default" } = await req.json();
-    
-    if (!jobId) {
-      return Response.json({ error: "jobId required" }, { status: 400 });
-    }
+    if (!jobId) return Response.json({ error: "jobId required" }, { status: 400 });
 
     const db = getDb();
-    
-    // Get the job
-    const job = await db.job.findUnique({
-      where: { id: jobId, userId: effectiveUserId }
-    });
+    const job = await db.job.findUnique({ where: { id: jobId, userId: effectiveUserId } });
+    if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
-    if (!job) {
-      return Response.json({ error: "Job not found" }, { status: 404 });
-    }
+    await db.job.update({ where: { id: jobId }, data: { status: "queued" } });
 
-    if (job.status !== "queued") {
-      return Response.json({ error: "Job already processed" }, { status: 400 });
-    }
+    const region = process.env.AWS_REGION as string;
+    const queueUrl = process.env.AWS_SQS_QUEUE_URL as string;
+    if (!region || !queueUrl) return Response.json({ error: "SQS not configured" }, { status: 500 });
 
-    // Update job status to processing
-    await db.job.update({
-      where: { id: jobId },
-      data: { status: "processing" }
-    });
+    const sqs = new SQSClient({ region, credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
+    }});
 
-    // Start background processing (for now, in-process)
-    try {
-      const { runFfmpegWithMetadata, extractMetadata } = await import("@/lib/video");
-      const dataDir = process.env.DATA_DIR || (process.env.VERCEL ? "/tmp/ace-storage" : path.join(process.cwd(), "var", "storage"));
-      const inputPath = path.join(dataDir, job.inputFilename);
+    const payload = { jobId, userId: effectiveUserId, bucket: process.env.AWS_S3_BUCKET, key: job.inputFilename, preset };
+    await sqs.send(new SendMessageCommand({ QueueUrl: queueUrl, MessageBody: JSON.stringify(payload) }));
 
-      if (!fs.existsSync(inputPath)) {
-        throw new Error(`Input file not found at ${inputPath}`);
-      }
-
-      // Extract original metadata
-      const beforeMeta = await extractMetadata(inputPath).catch(() => null);
-      
-      // Process with FFmpeg
-      const { outputPath } = await runFfmpegWithMetadata(inputPath, {
-        title: `AI Content Engine Export - ${new Date().toISOString()}`,
-        comment: `job_id=${jobId}`,
-        creation_time: new Date().toISOString()
-      });
-
-      // Extract processed metadata
-      const afterMeta = await extractMetadata(outputPath).catch(() => null);
-      
-      // Update job as completed
-      await db.job.update({
-        where: { id: jobId },
-        data: {
-          status: "completed",
-          outputFilename: path.basename(outputPath),
-          metaJson: JSON.stringify({
-            before: beforeMeta,
-            after: afterMeta,
-            preset,
-            processedAt: new Date().toISOString()
-          }),
-          updatedAt: new Date()
-        }
-      });
-
-      return Response.json({ 
-        ok: true, 
-        message: "Processing completed successfully",
-        jobId 
-      });
-
-    } catch (e: any) {
-      // Capture rich error (stderr/exitCode/etc) if available
-      const errObj = {
-        message: e?.message || String(e),
-        exitCode: e?.exitCode ?? null,
-        stderr: e?.stderr ?? null,
-        stdout: e?.stdout ?? null,
-        bin: e?.bin ?? null,
-        args: Array.isArray(e?.args) ? e.args : null,
-        when: new Date().toISOString(),
-      } as const;
-      console.error("[jobs] processing error", errObj);
-
-      // Update job as failed with stderr stored
-      await db.job.update({
-        where: { id: jobId },
-        data: {
-          status: "failed",
-          metaJson: JSON.stringify({ error: errObj }),
-          updatedAt: new Date()
-        }
-      });
-
-      return Response.json({ 
-        ok: false, 
-        error: "ffmpeg_failed",
-        ...errObj,
-      }, { status: 500 });
-    }
-
+    return Response.json({ ok: true, enqueued: true });
   } catch (e) {
     console.error("[jobs] POST error", e);
     return Response.json({ error: "Server error" }, { status: 500 });
