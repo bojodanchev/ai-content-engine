@@ -1,6 +1,7 @@
 "use client";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 
 export default function UploadClient() {
   const router = useRouter();
@@ -37,15 +38,12 @@ export default function UploadClient() {
     }
     setIsSubmitting(true);
     try {
-      // Use official client-side upload handler endpoint
-      const up = await fetch(`/api/blob-upload?pathname=${encodeURIComponent(file.name)}`, {
-        method: "POST",
-        body: file,
-        headers: { "content-type": file.type || "application/octet-stream" },
+      // Use official client upload helper which speaks the same protocol as /api/blob-upload (handleUpload)
+      const { url: blobUrl } = await upload(file.name, file, {
+        access: "private",
+        contentType: file.type || "application/octet-stream",
+        handleUploadUrl: "/api/blob-upload",
       });
-      if (!up.ok) throw new Error("Failed to init upload");
-      const uploadRes = await up.json();
-      const blobUrl = uploadRes.url || uploadRes.pathname || uploadRes.location;
 
       // 3) Ask server to process from blob URL
       const res = await fetch("/api/process-from-blob", {
