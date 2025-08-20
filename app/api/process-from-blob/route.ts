@@ -40,7 +40,10 @@ export async function POST(req: NextRequest) {
   );
 
   try {
-    const { outputPath } = await runFfmpegWithMetadata(inputPath, { title, comment, creation_time });
+    const autoTitle = title || `Post ${new Date().toISOString()}`;
+    const autoComment = comment || `Processed by AI Content Engine`;
+    const autoCreation = creation_time || new Date().toISOString();
+    const { outputPath } = await runFfmpegWithMetadata(inputPath, { title: autoTitle, comment: autoComment, creation_time: autoCreation });
     const afterMeta = await extractMetadata(outputPath).catch(() => null);
     db.prepare("UPDATE jobs SET status=?, output_filename=?, updated_at=datetime('now'), meta_json=? WHERE id=?").run(
       "completed",
