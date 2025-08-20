@@ -1,13 +1,13 @@
 {
   "functions": {
-    "app/api/upload-direct/route.ts": {
-      "includeFiles": "node_modules/{ffmpeg-static/ffmpeg,ffprobe-static/bin/**}",
-      "memory": 1024,
-      "maxDuration": 120
-    },
     "app/api/upload/route.ts": {
       "includeFiles": "node_modules/{ffmpeg-static/ffmpeg,ffprobe-static/bin/**}",
-      "memory": 1024,
+      "memory": 1536,
+      "maxDuration": 120
+    },
+    "app/api/jobs/route.ts": {
+      "includeFiles": "node_modules/{ffmpeg-static/ffmpeg,ffprobe-static/bin/**}",
+      "memory": 1536,
       "maxDuration": 120
     }
   }

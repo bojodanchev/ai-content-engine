@@ -11,6 +11,7 @@ export default function UploadClient() {
   const [error, setError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("");
+  const [stderrPreview, setStderrPreview] = useState<string | null>(null);
 
   const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -31,30 +32,24 @@ export default function UploadClient() {
 
   const uploadFile = async () => {
     setError(null);
+    setStderrPreview(null);
     if (!file) {
       setError("Select a video first");
       return;
     }
     setIsUploading(true);
     try {
-      // Step 1: Upload file and get jobId
       const fd = new FormData();
       fd.append("file", file);
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        body: fd,
-      });
-      
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
       if (!uploadRes.ok) {
         let msg = `Upload failed (${uploadRes.status})`;
         try { const j = await uploadRes.json(); if (j?.error) msg = j.error; } catch {}
         throw new Error(msg);
       }
-      
       const uploadData = await uploadRes.json();
       setJobId(uploadData.jobId);
       setStatus("File uploaded successfully. Ready to process.");
-      
     } catch (e: any) {
       setError(e.message ?? "Upload failed");
     } finally {
@@ -64,35 +59,31 @@ export default function UploadClient() {
 
   const startProcessing = async () => {
     if (!jobId) return;
-    
     setIsProcessing(true);
     setError(null);
-    
+    setStderrPreview(null);
     try {
-      // Step 2: Trigger processing
       const processRes = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobId, preset: "default" })
       });
-      
       if (!processRes.ok) {
         let msg = `Processing failed (${processRes.status})`;
-        try { const j = await processRes.json(); if (j?.error) msg = j.error; } catch {}
+        try {
+          const j = await processRes.json();
+          if (j?.error) msg = j.error;
+          if (j?.stderr) setStderrPreview(String(j.stderr).slice(0, 1000));
+        } catch {}
         throw new Error(msg);
       }
-      
-      const processData = await processRes.json();
       setStatus("Processing completed successfully!");
-      
-      // Refresh the page to show the new job
       setTimeout(() => {
         router.refresh();
         setFile(null);
         setJobId(null);
         setStatus("");
-      }, 2000);
-      
+      }, 1500);
     } catch (e: any) {
       setError(e.message ?? "Processing failed");
     } finally {
@@ -105,16 +96,14 @@ export default function UploadClient() {
     setJobId(null);
     setStatus("");
     setError(null);
+    setStderrPreview(null);
   };
 
   return (
     <div className="grid gap-4">
       <div
         className={`rounded-2xl border ${isDragging ? "border-fuchsia-400/50 bg-white/10" : "border-white/10 bg-white/[0.04]"} p-6`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragging(true);
-        }}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
       >
@@ -132,7 +121,12 @@ export default function UploadClient() {
       </div>
 
       {error && <div className="text-sm text-red-400">{error}</div>}
-      
+      {stderrPreview && (
+        <pre className="text-xs whitespace-pre-wrap text-white/70 bg-white/5 p-3 rounded-lg max-h-56 overflow-auto">
+{stderrPreview}
+        </pre>
+      )}
+
       {status && (
         <div className="text-sm text-green-400 bg-green-400/10 p-3 rounded-lg">
           {status}

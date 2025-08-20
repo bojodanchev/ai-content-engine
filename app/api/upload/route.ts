@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export const preferredRegion = ["iad1", "cle1", "sfo1"];
+export const sizeLimit = "100mb";
 
 export async function POST(req: NextRequest) {
   const sessionId = cookies().get("ace_session_id")?.value;
