@@ -7,6 +7,11 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  serverExternalPackages: [
+    "@ffmpeg-installer/ffmpeg",
+    "ffprobe-static",
+    "fluent-ffmpeg"
+  ],
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb'

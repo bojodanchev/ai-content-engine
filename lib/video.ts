@@ -1,5 +1,6 @@
 import "server-only";
-import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+// Defer resolving installer at runtime to avoid static bundling of platform subpackages
+const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 import ffprobeStatic from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
@@ -30,41 +31,49 @@ export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOv
   const dir = path.dirname(inputPath);
   const base = path.basename(inputPath, path.extname(inputPath));
   const outputPath = path.join(dir, `${base}_processed.mp4`);
-  // Always transcode to ensure a new file signature and inject metadata
+  // 1) Try fast metadata-only rewrite (copy streams)
+  try {
+    await new Promise<void>((resolve, reject) => {
+      let cmd = ffmpeg(inputPath)
+        .outputOptions([
+          "-y",
+          "-map_metadata 0",
+          `-metadata unique_id=${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          `-metadata encoder=AI-Content-Engine`,
+          "-movflags +faststart",
+          "-c copy",
+        ]);
+      if (overrides.title) cmd = cmd.outputOptions([`-metadata title=${overrides.title}`]);
+      if (overrides.comment) cmd = cmd.outputOptions([`-metadata comment=${overrides.comment}`]);
+      if (overrides.creation_time) cmd = cmd.outputOptions([`-metadata creation_time=${overrides.creation_time}`]);
+      cmd.on("end", () => resolve()).on("error", reject).save(outputPath);
+    });
+    if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) {
+      return { outputPath };
+    }
+  } catch (e) {
+    console.log("[ffmpeg] copy failed, will transcode", (e as any)?.message || e);
+  }
+
+  // 2) Fallback to light transcode to force uniqueness
   await new Promise<void>((resolve, reject) => {
     let command = ffmpeg(inputPath)
       .outputOptions([
         "-y",
         "-movflags +faststart",
         "-pix_fmt yuv420p",
-        "-g 249",
-        "-preset veryfast",
         `-metadata unique_id=${Date.now()}-${Math.random().toString(36).slice(2)}`,
         `-metadata encoder=AI-Content-Engine`,
         "-map_metadata 0",
       ])
       .videoCodec("libx264")
-      .audioCodec("aac")
-      .audioFrequency(44100)
-      .audioBitrate("128k");
+      .audioCodec("aac");
 
     if (overrides.title) command = command.outputOptions([`-metadata title=${overrides.title}`]);
     if (overrides.comment) command = command.outputOptions([`-metadata comment=${overrides.comment}`]);
     if (overrides.creation_time) command = command.outputOptions([`-metadata creation_time=${overrides.creation_time}`]);
 
-    command
-      .on("start", (cmdLine) => {
-        console.log("[ffmpeg] start", cmdLine);
-      })
-      .on("stderr", (line) => {
-        console.log("[ffmpeg]", line);
-      })
-      .on("end", () => resolve())
-      .on("error", (err, _stdout, _stderr) => {
-        console.error("[ffmpeg] error", err?.message || err);
-        reject(err);
-      })
-      .save(outputPath);
+    command.on("end", () => resolve()).on("error", reject).save(outputPath);
   });
 
   return { outputPath };
