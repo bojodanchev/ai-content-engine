@@ -10,6 +10,13 @@ const resolvedFfmpeg = process.env.FFMPEG_PATH || (ffmpegStatic as unknown as st
 const resolvedFfprobe = process.env.FFPROBE_PATH || (ffprobeStatic as any)?.path || "ffprobe";
 ffmpeg.setFfmpegPath(resolvedFfmpeg);
 ffmpeg.setFfprobePath(resolvedFfprobe);
+try {
+  const ff = resolvedFfmpeg;
+  const fp = resolvedFfprobe;
+  const ffExists = fs.existsSync(ff);
+  const fpExists = fs.existsSync(fp);
+  console.log("[ffmpeg] resolved", { ff, ffExists, fp, fpExists });
+} catch {}
 
 export async function extractMetadata(filePath: string): Promise<Record<string, any>> {
   return new Promise((resolve, reject) => {
