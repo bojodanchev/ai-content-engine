@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "ffmpeg-static": "^5.2.0",
     "ffprobe-static": "^3.1.0",
     "@whop/api": "^0.0.42",
     "@prisma/client": "^5.18.0",

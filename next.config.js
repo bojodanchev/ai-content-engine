@@ -7,11 +7,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  serverExternalPackages: [
-    "@ffmpeg-installer/ffmpeg",
-    "ffprobe-static",
-    "fluent-ffmpeg"
-  ],
+  // No custom bundler overrides; rely on runtime path resolution
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb'

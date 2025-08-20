@@ -1,13 +1,12 @@
 import "server-only";
-// Defer resolving installer at runtime to avoid static bundling of platform subpackages
-const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
+import ffmpegStatic from "ffmpeg-static";
 import ffprobeStatic from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import fs from "fs";
 
 // Configure ffmpeg/ffprobe paths with fallbacks for serverless environments
-const resolvedFfmpeg = (ffmpegInstaller as any)?.path || process.env.FFMPEG_PATH || "ffmpeg";
+const resolvedFfmpeg = (ffmpegStatic as unknown as string) || process.env.FFMPEG_PATH || "ffmpeg";
 const resolvedFfprobe = (ffprobeStatic as any)?.path || process.env.FFPROBE_PATH || "ffprobe";
 ffmpeg.setFfmpegPath(resolvedFfmpeg);
 ffmpeg.setFfprobePath(resolvedFfprobe);
