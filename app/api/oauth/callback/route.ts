@@ -13,10 +13,14 @@ export async function GET(request: Request) {
   cookies().delete(`oauth-state.${state}`);
   const nextPath = nextCookie ? decodeURIComponent(nextCookie) : "/dashboard";
 
-  const { accessToken, refreshToken, expiresAt } = await whopApi.oauth.exchangeCode({
+  const result = await whopApi.oauth.exchangeCode({
     redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/callback`,
     code,
   });
+  if (!('ok' in result) || !result.ok) {
+    return new Response('OAuth exchange failed', { status: 401 });
+  }
+  const { accessToken, refreshToken, expiresAt } = result.tokens;
 
   const me = await whopApi.me.getMe({ accessToken });
 
