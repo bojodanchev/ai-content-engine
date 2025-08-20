@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/session";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
+import path from "path";
+import fs from "fs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -71,18 +73,14 @@ export async function POST(req: NextRequest) {
       data: { status: "processing" }
     });
 
-    // Start background processing (this will be handled by a separate worker)
-    // For now, we'll process immediately but this should be moved to a queue
+    // Start background processing (for now, in-process)
     try {
       const { runFfmpegWithMetadata, extractMetadata } = await import("@/lib/video");
-      const path = await import("path");
-      const fs = await import("fs");
-      
       const dataDir = process.env.DATA_DIR || (process.env.VERCEL ? "/tmp/ace-storage" : path.join(process.cwd(), "var", "storage"));
       const inputPath = path.join(dataDir, job.inputFilename);
-      
+
       if (!fs.existsSync(inputPath)) {
-        throw new Error("Input file not found");
+        throw new Error(`Input file not found at ${inputPath}`);
       }
 
       // Extract original metadata
