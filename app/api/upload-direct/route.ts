@@ -35,13 +35,7 @@ export async function POST(req: NextRequest) {
     const db = getDb();
     const jobId = crypto.randomUUID();
     const beforeMeta = await extractMetadata(inputPath).catch(() => null);
-    db.prepare("INSERT INTO jobs (id, user_id, input_filename, status, meta_json) VALUES (?, ?, ?, ?, ?)").run(
-      jobId,
-      userId,
-      path.basename(inputPath),
-      "queued",
-      JSON.stringify({ before: beforeMeta })
-    );
+    await db.job.create({ data: { id: jobId, userId, inputFilename: path.basename(inputPath), status: "queued", metaJson: JSON.stringify({ before: beforeMeta }) } });
 
     try {
       const { outputPath } = await runFfmpegWithMetadata(inputPath, {
@@ -50,15 +44,10 @@ export async function POST(req: NextRequest) {
         creation_time: new Date().toISOString(),
       });
       const afterMeta = await extractMetadata(outputPath).catch(() => null);
-      db.prepare("UPDATE jobs SET status=?, output_filename=?, updated_at=datetime('now'), meta_json=? WHERE id=?").run(
-        "completed",
-        path.basename(outputPath),
-        JSON.stringify({ before: beforeMeta, after: afterMeta }),
-        jobId
-      );
+      await db.job.update({ where: { id: jobId }, data: { status: "completed", outputFilename: path.basename(outputPath), metaJson: JSON.stringify({ before: beforeMeta, after: afterMeta }), updatedAt: new Date() } });
     } catch (e) {
       console.error("[upload-direct] ffmpeg failed", e);
-      db.prepare("UPDATE jobs SET status=?, updated_at=datetime('now') WHERE id=?").run("failed", jobId);
+      await db.job.update({ where: { id: jobId }, data: { status: "failed", updatedAt: new Date() } });
       if (req.headers.get("x-requested-with") === "XMLHttpRequest") {
         return Response.json({ ok: false, error: "ffmpeg_failed" }, { status: 500 });
       }

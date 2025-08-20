@@ -8,14 +8,14 @@ export async function GET(req: NextRequest) {
   const id = url.searchParams.get("id");
   if (!id) return new Response("Missing id", { status: 400 });
   const db = getDb();
-  const row = db.prepare("SELECT output_filename FROM jobs WHERE id=?").get(id) as any;
-  if (!row?.output_filename) return new Response("Not found", { status: 404 });
+  const record = await db.job.findUnique({ where: { id }, select: { outputFilename: true } }) as any;
+  if (!record?.outputFilename) return new Response("Not found", { status: 404 });
   const dataDir = process.env.DATA_DIR || (process.env.VERCEL ? "/tmp/ace-storage" : path.join(process.cwd(), "var", "storage"));
-  const filePath = path.join(dataDir, row.output_filename);
+  const filePath = path.join(dataDir, record.outputFilename);
   if (!fs.existsSync(filePath)) return new Response("File missing", { status: 404 });
   const stat = fs.statSync(filePath);
   const stream = fs.createReadStream(filePath);
-  const safeName = row.output_filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeName = record.outputFilename.replace(/[^a-zA-Z0-9._-]/g, "_");
   return new Response(stream as any, {
     headers: {
       "Content-Type": "video/mp4",

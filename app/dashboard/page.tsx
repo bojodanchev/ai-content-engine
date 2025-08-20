@@ -31,21 +31,24 @@ export default function DashboardPage() {
 
 function JobsList({ userId }: { userId: string }) {
   // This is a server component; read from SQLite directly
-  const db = require("@/lib/db");
-  const { getDb } = db;
-  const rows = getDb()
-    .prepare("SELECT id, input_filename, output_filename, status, created_at FROM jobs WHERE user_id=? ORDER BY created_at DESC LIMIT 20")
-    .all(userId) as Array<any>;
+  const { getDb } = require("@/lib/db");
+  const prisma = getDb();
+  const rows = prisma.job.findMany({
+    where: { userId },
+    select: { id: true, inputFilename: true, outputFilename: true, status: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  }) as any;
 
   return (
     <div className="mt-3 grid gap-2">
-      {rows.map((r) => (
+      {(rows as any).map((r: any) => (
         <div key={r.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-sm flex items-center justify-between">
           <div>
-            <div className="font-medium">{r.input_filename}</div>
+            <div className="font-medium">{r.inputFilename}</div>
             <div className="text-white/60">{r.status}</div>
           </div>
-          {r.output_filename ? (
+          {r.outputFilename ? (
             <a className="underline" href={`/api/download?id=${encodeURIComponent(r.id)}`}>Download</a>
           ) : null}
         </div>
