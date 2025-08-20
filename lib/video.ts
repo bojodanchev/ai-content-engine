@@ -1,14 +1,13 @@
 import "server-only";
-import ffmpegStatic from "ffmpeg-static";
-import ffprobeStatic from "ffprobe-static";
+import { ffmpegPath, ffprobePath } from "@napi-rs/ffmpeg";
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import fs from "fs";
 
 // Configure ffmpeg/ffprobe paths with fallbacks for serverless environments
 // Prefer library-resolved binary paths; fall back to env only if necessary
-const resolvedFfmpeg = (ffmpegStatic as unknown as string) || process.env.FFMPEG_PATH || "ffmpeg";
-const resolvedFfprobe = (ffprobeStatic as any)?.path || process.env.FFPROBE_PATH || "ffprobe";
+const resolvedFfmpeg = ffmpegPath || process.env.FFMPEG_PATH || "ffmpeg";
+const resolvedFfprobe = ffprobePath || process.env.FFPROBE_PATH || "ffprobe";
 ffmpeg.setFfmpegPath(resolvedFfmpeg);
 ffmpeg.setFfprobePath(resolvedFfprobe);
 try {
