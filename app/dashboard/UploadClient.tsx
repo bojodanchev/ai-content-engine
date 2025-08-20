@@ -36,21 +36,19 @@ export default function UploadClient() {
     }
     setIsSubmitting(true);
     try {
-      // Pre-signed URL flow only
-      const pre = await fetch("/api/blob-url", {
+      // Direct multipart to server (avoids Blob signing issues)
+      const fd = new FormData();
+      fd.append("file", file);
+      const up = await fetch("/api/upload-direct", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, contentType: file.type || "application/octet-stream" })
+        body: fd,
+        headers: { "X-Requested-With": "XMLHttpRequest" },
       });
-      if (!pre.ok) {
-        let msg = "Failed to init upload";
-        try { const j = await pre.json(); if (j?.error) msg = j.error; } catch {}
+      if (!up.ok) {
+        let msg = `Upload failed (${up.status})`;
+        try { const j = await up.json(); if (j?.error) msg = j.error; } catch {}
         throw new Error(msg);
       }
-      const { url } = await pre.json();
-      const put = await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
-      if (!put.ok) throw new Error("Direct upload failed");
-      const blobUrl = put.headers.get("location") || url;
 
       // 3) Ask server to process from blob URL
       const res = await fetch("/api/process-from-blob", {
