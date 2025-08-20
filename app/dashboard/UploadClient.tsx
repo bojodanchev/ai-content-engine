@@ -1,7 +1,6 @@
 "use client";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 // no client helper; use pre-signed PUT URLs only
 
 export default function UploadClient() {
@@ -37,21 +36,19 @@ export default function UploadClient() {
     }
     setIsSubmitting(true);
     try {
-      // Client -> Blob using tokenized handleUpload route
-      const up = await upload(file.name, file, {
-        access: "public",
-        contentType: file.type || "application/octet-stream",
-        handleUploadUrl: "/api/blob-upload",
-      });
-      const blobUrl = up.url;
-
-      // 3) Ask server to process from blob URL
-      const res = await fetch("/api/process-from-blob", {
+      // Direct multipart to server (reliable path)
+      const fd = new FormData();
+      fd.append("file", file);
+      const up = await fetch("/api/upload-direct", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blobUrl })
+        body: fd,
+        headers: { "X-Requested-With": "XMLHttpRequest" },
       });
-      if (!res.ok) throw new Error(`Processing failed (${res.status})`);
+      if (!up.ok) {
+        let msg = `Upload failed (${up.status})`;
+        try { const j = await up.json(); if (j?.error) msg = j.error; } catch {}
+        throw new Error(msg);
+      }
       // Refresh Jobs list
       router.refresh();
       setFile(null);
