@@ -14,11 +14,11 @@ const nextConfig = {
     },
     outputFileTracingIncludes: {
       // Ensure ffmpeg/ffprobe binaries are bundled with the serverless function
-      "app/api/upload-direct/route.ts": [
+      "app/api/upload-direct/route": [
         "node_modules/ffmpeg-static/ffmpeg",
         "node_modules/ffprobe-static/bin/*"
       ],
-      "app/api/upload/route.ts": [
+      "app/api/upload/route": [
         "node_modules/ffmpeg-static/ffmpeg",
         "node_modules/ffprobe-static/bin/*"
       ]

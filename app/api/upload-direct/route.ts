@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 export const sizeLimit = "50mb";
+export const body = { sizeLimit: "50mb" } as const;
 export const preferredRegion = ["iad1", "cle1", "sfo1"];
 
 export async function POST(req: NextRequest) {
