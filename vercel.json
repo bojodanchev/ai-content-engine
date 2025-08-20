@@ -1,0 +1,24 @@
+{
+  "functions": {
+    "app/api/upload-direct/route.ts": {
+      "runtime": "nodejs20.x",
+      "includeFiles": [
+        "node_modules/ffmpeg-static/ffmpeg",
+        "node_modules/ffprobe-static/bin/**"
+      ],
+      "memory": 1024,
+      "maxDuration": 120
+    },
+    "app/api/upload/route.ts": {
+      "runtime": "nodejs20.x",
+      "includeFiles": [
+        "node_modules/ffmpeg-static/ffmpeg",
+        "node_modules/ffprobe-static/bin/**"
+      ],
+      "memory": 1024,
+      "maxDuration": 120
+    }
+  }
+}
+
+
