@@ -34,6 +34,12 @@ export async function POST(req: NextRequest) {
     fs.writeFileSync(inputPath, Buffer.from(arrayBuffer));
 
     const db = getDb();
+    // Ensure the user record exists to satisfy FK constraint
+    await db.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId, username: null, avatarUrl: null },
+    });
     const jobId = crypto.randomUUID();
     const beforeMeta = await extractMetadata(inputPath).catch(() => null);
     await db.job.create({ data: { id: jobId, userId, inputFilename: path.basename(inputPath), status: "queued", metaJson: JSON.stringify({ before: beforeMeta }) } });
