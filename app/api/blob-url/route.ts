@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (!token) return Response.json({ error: "missing blob token" }, { status: 500 });
     const pathname = `uploads/${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`;
     const { url, token: clientToken } = await generateUploadURL({
-      access: "private",
+      access: "public",
       contentType: ct,
       token,
       pathname,
