@@ -37,10 +37,12 @@ export async function POST(req: NextRequest) {
     Key: key,
     Conditions: [
       ["starts-with", "$Content-Type", ""],
+      ["eq", "$success_action_status", "201"],
       ["content-length-range", 0, 524288000] // 500MB
     ],
     Fields: {
       "Content-Type": contentType,
+      "success_action_status": "201",
     },
     Expires: 3600,
   });

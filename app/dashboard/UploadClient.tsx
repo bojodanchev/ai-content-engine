@@ -58,8 +58,8 @@ export default function UploadClient() {
       Object.entries(upload.fields).forEach(([k, v]) => form.append(k, v as string));
       form.append("Content-Type", file.type || "application/octet-stream");
       form.append("file", file);
-      const s3Res = await fetch(upload.url, { method: "POST", body: form });
-      if (!s3Res.ok) {
+      const s3Res = await fetch(upload.url, { method: "POST", body: form, mode: "cors" as any });
+      if (!s3Res.ok && s3Res.status !== 201) {
         throw new Error(`S3 upload failed (${s3Res.status})`);
       }
       setJobId(jid);
