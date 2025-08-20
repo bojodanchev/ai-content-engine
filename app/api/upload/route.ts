@@ -57,9 +57,14 @@ export async function POST(req: NextRequest) {
     );
   } catch (e) {
     db.prepare("UPDATE jobs SET status=?, updated_at=datetime('now') WHERE id=?").run("failed", jobId);
+    if (req.headers.get("x-requested-with") === "XMLHttpRequest") {
+      return Response.json({ ok: false }, { status: 500 });
+    }
     return new Response("Processing failed", { status: 500 });
   }
-
+  if (req.headers.get("x-requested-with") === "XMLHttpRequest") {
+    return Response.json({ ok: true });
+  }
   return Response.redirect(`/dashboard`);
 }
 
