@@ -6,8 +6,9 @@ import path from "path";
 import fs from "fs";
 
 // Configure ffmpeg/ffprobe paths with fallbacks for serverless environments
-const resolvedFfmpeg = process.env.FFMPEG_PATH || (ffmpegStatic as unknown as string) || "ffmpeg";
-const resolvedFfprobe = process.env.FFPROBE_PATH || (ffprobeStatic as any)?.path || "ffprobe";
+// Prefer library-resolved binary paths; fall back to env only if necessary
+const resolvedFfmpeg = (ffmpegStatic as unknown as string) || process.env.FFMPEG_PATH || "ffmpeg";
+const resolvedFfprobe = (ffprobeStatic as any)?.path || process.env.FFPROBE_PATH || "ffprobe";
 ffmpeg.setFfmpegPath(resolvedFfmpeg);
 ffmpeg.setFfprobePath(resolvedFfprobe);
 try {
