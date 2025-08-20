@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     onBeforeGenerateToken: async (pathname, _clientPayload) => {
       return {
         token,
+        access: "public",
         allowedContentTypes: ["video/*", "application/octet-stream"],
         pathname: `uploads/${Date.now()}-${Math.random().toString(36).slice(2)}-${pathname}`,
       };

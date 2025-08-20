@@ -6,9 +6,7 @@ import { upload } from "@vercel/blob/client";
 export default function UploadClient() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
-  const [comment, setComment] = useState("");
-  const [creationTime, setCreationTime] = useState("");
+  // metadata fields are auto-generated server-side for best UX
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +38,7 @@ export default function UploadClient() {
     try {
       // Use official client upload helper which speaks the same protocol as /api/blob-upload (handleUpload)
       const { url: blobUrl } = await upload(file.name, file, {
-        access: "private",
+        access: "public",
         contentType: file.type || "application/octet-stream",
         handleUploadUrl: "/api/blob-upload",
       });
@@ -49,15 +47,13 @@ export default function UploadClient() {
       const res = await fetch("/api/process-from-blob", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blobUrl, title, comment, creation_time: creationTime })
+        body: JSON.stringify({ blobUrl })
       });
       if (!res.ok) throw new Error(`Processing failed (${res.status})`);
       // Refresh Jobs list
       router.refresh();
       setFile(null);
-      setTitle("");
-      setComment("");
-      setCreationTime("");
+      // metadata is auto-set server-side; nothing to reset
     } catch (e: any) {
       setError(e.message ?? "Upload failed");
     } finally {
@@ -89,20 +85,7 @@ export default function UploadClient() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-white/70 text-sm">Title</span>
-          <input className="bg-white/5 border border-white/10 rounded-lg px-3 py-2" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Optional override" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-white/70 text-sm">Comment</span>
-          <input className="bg-white/5 border border-white/10 rounded-lg px-3 py-2" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Optional" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-white/70 text-sm">Creation time</span>
-          <input className="bg-white/5 border border-white/10 rounded-lg px-3 py-2" value={creationTime} onChange={(e) => setCreationTime(e.target.value)} placeholder="ISO 8601 or leave blank" />
-        </label>
-      </div>
+      {/* metadata inputs removed; handled automatically on server */}
 
       {error && <div className="text-sm text-red-400">{error}</div>}
 
