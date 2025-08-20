@@ -5,8 +5,11 @@ import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import fs from "fs";
 
-ffmpeg.setFfmpegPath(ffmpegStatic as unknown as string);
-ffmpeg.setFfprobePath((ffprobeStatic as any).path);
+// Configure ffmpeg/ffprobe paths with fallbacks for serverless environments
+const resolvedFfmpeg = (ffmpegStatic as unknown as string) || process.env.FFMPEG_PATH || "ffmpeg";
+const resolvedFfprobe = ((ffprobeStatic as any)?.path as string) || process.env.FFPROBE_PATH || "ffprobe";
+ffmpeg.setFfmpegPath(resolvedFfmpeg);
+ffmpeg.setFfprobePath(resolvedFfprobe);
 
 export async function extractMetadata(filePath: string): Promise<Record<string, any>> {
   return new Promise((resolve, reject) => {
@@ -31,6 +34,7 @@ export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOv
   await new Promise<void>((resolve, reject) => {
     let command = ffmpeg(inputPath)
       .outputOptions([
+        "-y",
         "-movflags +faststart",
         "-pix_fmt yuv420p",
         "-g 249",
@@ -40,13 +44,27 @@ export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOv
         "-map_metadata 0",
       ])
       .videoCodec("libx264")
-      .audioCodec("aac");
+      .audioCodec("aac")
+      .audioFrequency(44100)
+      .audioBitrate("128k");
 
     if (overrides.title) command = command.outputOptions([`-metadata title=${overrides.title}`]);
     if (overrides.comment) command = command.outputOptions([`-metadata comment=${overrides.comment}`]);
     if (overrides.creation_time) command = command.outputOptions([`-metadata creation_time=${overrides.creation_time}`]);
 
-    command.on("end", () => resolve()).on("error", reject).save(outputPath);
+    command
+      .on("start", (cmdLine) => {
+        console.log("[ffmpeg] start", cmdLine);
+      })
+      .on("stderr", (line) => {
+        console.log("[ffmpeg]", line);
+      })
+      .on("end", () => resolve())
+      .on("error", (err, _stdout, _stderr) => {
+        console.error("[ffmpeg] error", err?.message || err);
+        reject(err);
+      })
+      .save(outputPath);
   });
 
   return { outputPath };

@@ -55,16 +55,10 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.error("[upload-direct] ffmpeg failed", e);
       await db.job.update({ where: { id: jobId }, data: { status: "failed", updatedAt: new Date() } });
-      if (req.headers.get("x-requested-with") === "XMLHttpRequest") {
-        return Response.json({ ok: false, error: "ffmpeg_failed" }, { status: 500 });
-      }
-      return new Response("Processing failed", { status: 500 });
+      return Response.json({ ok: false, error: "ffmpeg_failed" }, { status: 500 });
     }
 
-    if (req.headers.get("x-requested-with") === "XMLHttpRequest") {
-      return Response.json({ ok: true });
-    }
-    return Response.redirect(`/dashboard`);
+    return Response.json({ ok: true });
   } catch (e: any) {
     console.error("[upload-direct] error", e);
     return new Response("Server error", { status: 500 });
