@@ -8,6 +8,8 @@ import { getDb } from "@/lib/db";
 import { runFfmpegWithMetadata, extractMetadata } from "@/lib/video";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 60; // allow longer ffmpeg runs on Vercel
 
 export async function POST(req: NextRequest) {
   const sessionId = cookies().get("ace_session_id")?.value;
@@ -16,7 +18,13 @@ export async function POST(req: NextRequest) {
   const effectiveUserId = sessionUser?.userId || fallbackUserId;
   if (!effectiveUserId) return new Response("Unauthorized", { status: 401 });
 
-  const formData = await req.formData();
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch (e) {
+    console.error("[upload] formData parse failed", e);
+    return new Response("Bad form data", { status: 400 });
+  }
   const file = formData.get("file") as File | null;
   if (!file) return new Response("File missing", { status: 400 });
 
@@ -30,7 +38,12 @@ export async function POST(req: NextRequest) {
   const inputId = crypto.randomUUID();
   const inputPath = path.join(dataDir, `${inputId}_${file.name}`);
   const arrayBuffer = await file.arrayBuffer();
-  fs.writeFileSync(inputPath, Buffer.from(arrayBuffer));
+  try {
+    fs.writeFileSync(inputPath, Buffer.from(arrayBuffer));
+  } catch (e) {
+    console.error("[upload] write file failed", e);
+    return new Response("Write failed", { status: 500 });
+  }
 
   const jobId = crypto.randomUUID();
   const db = getDb();
@@ -58,9 +71,10 @@ export async function POST(req: NextRequest) {
       jobId
     );
   } catch (e) {
+    console.error("[upload] ffmpeg failed", e);
     db.prepare("UPDATE jobs SET status=?, updated_at=datetime('now') WHERE id=?").run("failed", jobId);
     if (req.headers.get("x-requested-with") === "XMLHttpRequest") {
-      return Response.json({ ok: false }, { status: 500 });
+      return Response.json({ ok: false, error: "ffmpeg_failed" }, { status: 500 });
     }
     return new Response("Processing failed", { status: 500 });
   }

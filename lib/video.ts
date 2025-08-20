@@ -27,43 +27,27 @@ export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOv
   const dir = path.dirname(inputPath);
   const base = path.basename(inputPath, path.extname(inputPath));
   const outputPath = path.join(dir, `${base}_processed.mp4`);
+  // Always transcode to ensure a new file signature and inject metadata
   await new Promise<void>((resolve, reject) => {
     let command = ffmpeg(inputPath)
       .outputOptions([
-        "-map_metadata 0",
-        "-c copy",
-        // inject a few benign container-level tags to improve uniqueness
+        "-movflags +faststart",
+        "-pix_fmt yuv420p",
+        "-g 249",
+        "-preset veryfast",
         `-metadata unique_id=${Date.now()}-${Math.random().toString(36).slice(2)}`,
         `-metadata encoder=AI-Content-Engine`,
-      ]);
+        "-map_metadata 0",
+      ])
+      .videoCodec("libx264")
+      .audioCodec("aac");
 
-    // Apply overrides to container metadata
     if (overrides.title) command = command.outputOptions([`-metadata title=${overrides.title}`]);
     if (overrides.comment) command = command.outputOptions([`-metadata comment=${overrides.comment}`]);
     if (overrides.creation_time) command = command.outputOptions([`-metadata creation_time=${overrides.creation_time}`]);
 
     command.on("end", () => resolve()).on("error", reject).save(outputPath);
   });
-
-  // Make "unique" by light-touch transcoding or stream map rewrite if copy fails
-  const stats = fs.statSync(outputPath);
-  if (!stats.size) {
-    await new Promise<void>((resolve, reject) => {
-      ffmpeg(inputPath)
-        .outputOptions([
-          "-movflags +faststart",
-          "-pix_fmt yuv420p",
-          // slight GOP/keyint jitter and timebase remux can also alter file signature
-          "-g 249",
-          "-preset veryfast",
-        ])
-        .videoCodec("libx264")
-        .audioCodec("aac")
-        .on("end", () => resolve())
-        .on("error", reject)
-        .save(outputPath);
-    });
-  }
 
   return { outputPath };
 }
