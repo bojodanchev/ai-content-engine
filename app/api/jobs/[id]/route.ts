@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/session";
-import { cookies } from "next/server";
+import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";

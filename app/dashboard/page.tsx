@@ -1,5 +1,5 @@
 import { getSessionUser } from "@/lib/session";
-import { cookies } from "next/server";
+import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 import UploadClient from "./UploadClient";
 import JobsList from "./JobsList";
