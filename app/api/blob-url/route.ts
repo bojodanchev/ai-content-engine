@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { put } from "@vercel/blob";
+import { generateUploadURL } from "@vercel/blob";
 
 export const dynamic = "force-dynamic";
 export const runtime = "edge";
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   if (!name || !contentType) return new Response("Bad request", { status: 400 });
   const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_READ_WRITE_TOKEN;
   if (!token) return new Response("Missing blob token", { status: 500 });
-  const { url } = await put(name, new Blob([""]), { access: "private", contentType, token });
+  const { url } = await generateUploadURL({ access: "private", contentType, token });
   return Response.json({ url });
 }
 

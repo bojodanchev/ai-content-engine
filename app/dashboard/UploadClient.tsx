@@ -49,12 +49,13 @@ export default function UploadClient() {
       // 2) Upload file directly to Vercel Blob
       const put = await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
       if (!put.ok) throw new Error("Direct upload failed");
+      const blobUrl = put.headers.get("location") || url;
 
       // 3) Ask server to process from blob URL
       const res = await fetch("/api/process-from-blob", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blobUrl: url, title, comment, creation_time: creationTime })
+        body: JSON.stringify({ blobUrl, title, comment, creation_time: creationTime })
       });
       if (!res.ok) throw new Error(`Processing failed (${res.status})`);
       // Refresh Jobs list
