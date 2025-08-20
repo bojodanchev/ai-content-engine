@@ -77,16 +77,33 @@ export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOv
   return { outputPath };
 }
 
+class ExecError extends Error {
+  exitCode: number | null;
+  stderr: string;
+  stdout: string;
+  bin: string;
+  args: string[];
+  constructor(message: string, opts: { exitCode: number | null; stderr: string; stdout: string; bin: string; args: string[] }) {
+    super(message);
+    this.name = "ExecError";
+    this.exitCode = opts.exitCode;
+    this.stderr = opts.stderr;
+    this.stdout = opts.stdout;
+    this.bin = opts.bin;
+    this.args = opts.args;
+  }
+}
+
 async function run(bin: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(bin, args);
     let stdout = ""; let stderr = "";
     child.stdout?.on("data", d => stdout += String(d));
     child.stderr?.on("data", d => stderr += String(d));
-    child.on("error", reject);
+    child.on("error", (err) => reject(new ExecError(err?.message || "spawn error", { exitCode: null, stderr, stdout, bin, args })));
     child.on("close", (code) => {
       if (code === 0) resolve({ stdout, stderr });
-      else reject(new Error(stderr || `exit ${code}`));
+      else reject(new ExecError(stderr || `exit ${code}`, { exitCode: code ?? null, stderr, stdout, bin, args }));
     });
   });
 }

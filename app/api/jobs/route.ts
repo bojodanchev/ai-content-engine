@@ -118,26 +118,33 @@ export async function POST(req: NextRequest) {
         jobId 
       });
 
-    } catch (e) {
-      console.error("[jobs] processing error", e);
-      
-      // Update job as failed
+    } catch (e: any) {
+      // Capture rich error (stderr/exitCode/etc) if available
+      const errObj = {
+        message: e?.message || String(e),
+        exitCode: e?.exitCode ?? null,
+        stderr: e?.stderr ?? null,
+        stdout: e?.stdout ?? null,
+        bin: e?.bin ?? null,
+        args: Array.isArray(e?.args) ? e.args : null,
+        when: new Date().toISOString(),
+      } as const;
+      console.error("[jobs] processing error", errObj);
+
+      // Update job as failed with stderr stored
       await db.job.update({
         where: { id: jobId },
         data: {
           status: "failed",
-          metaJson: JSON.stringify({
-            error: e instanceof Error ? e.message : String(e),
-            failedAt: new Date().toISOString()
-          }),
+          metaJson: JSON.stringify({ error: errObj }),
           updatedAt: new Date()
         }
       });
 
       return Response.json({ 
         ok: false, 
-        error: "Processing failed",
-        details: e instanceof Error ? e.message : String(e)
+        error: "ffmpeg_failed",
+        ...errObj,
       }, { status: 500 });
     }
 
