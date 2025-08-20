@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
+// no client helper; use pre-signed PUT URLs only
 
 export default function UploadClient() {
   const router = useRouter();
@@ -36,28 +36,17 @@ export default function UploadClient() {
     }
     setIsSubmitting(true);
     try {
-      // Use official client upload helper which speaks the same protocol as /api/blob-upload (handleUpload)
-      // Try official helper with our route; if it fails, fallback to pre-signed URL flow
-      let blobUrl: string | null = null;
-      try {
-        const u = await upload(file.name, file, {
-          access: "public",
-          contentType: file.type || "application/octet-stream",
-          handleUploadUrl: "/api/blob-upload",
-        });
-        blobUrl = u.url;
-      } catch (_err) {
-        const pre = await fetch("/api/blob-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: file.name, contentType: file.type || "application/octet-stream" })
-        });
-        if (!pre.ok) throw new Error("Failed to init upload");
-        const { url } = await pre.json();
-        const put = await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
-        if (!put.ok) throw new Error("Direct upload failed");
-        blobUrl = put.headers.get("location") || url;
-      }
+      // Pre-signed URL flow only
+      const pre = await fetch("/api/blob-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, contentType: file.type || "application/octet-stream" })
+      });
+      if (!pre.ok) throw new Error("Failed to init upload");
+      const { url } = await pre.json();
+      const put = await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
+      if (!put.ok) throw new Error("Direct upload failed");
+      const blobUrl = put.headers.get("location") || url;
 
       // 3) Ask server to process from blob URL
       const res = await fetch("/api/process-from-blob", {
