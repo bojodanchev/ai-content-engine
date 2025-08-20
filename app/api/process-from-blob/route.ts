@@ -7,7 +7,7 @@ import { extractMetadata, runFfmpegWithMetadata } from "@/lib/video";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   const { blobUrl, title, comment, creation_time } = await req.json();
