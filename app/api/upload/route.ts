@@ -12,7 +12,9 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const sessionId = cookies().get("ace_session_id")?.value;
   const sessionUser = sessionId ? getSessionUser(sessionId) : null;
-  if (!sessionUser) return new Response("Unauthorized", { status: 401 });
+  const fallbackUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
+  const effectiveUserId = sessionUser?.userId || fallbackUserId;
+  if (!effectiveUserId) return new Response("Unauthorized", { status: 401 });
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
   const beforeMeta = await extractMetadata(inputPath).catch(() => null);
   db.prepare("INSERT INTO jobs (id, user_id, input_filename, status, meta_json) VALUES (?, ?, ?, ?, ?)").run(
     jobId,
-    sessionUser.userId,
+    effectiveUserId,
     path.basename(inputPath),
     "queued",
     JSON.stringify({ before: beforeMeta })
