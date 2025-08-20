@@ -37,19 +37,26 @@ export default function UploadClient() {
     }
     setIsSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      if (title) fd.append("title", title);
-      if (comment) fd.append("comment", comment);
-      if (creationTime) fd.append("creation_time", creationTime);
-      const res = await fetch("/api/upload", {
+      // 1) Get blob upload URL
+      const pre = await fetch("/api/blob-url", {
         method: "POST",
-        body: fd,
-        headers: { "X-Requested-With": "XMLHttpRequest" },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, contentType: file.type || "application/octet-stream" })
       });
-      if (!res.ok) {
-        throw new Error(`Upload failed (${res.status})`);
-      }
+      if (!pre.ok) throw new Error("Failed to init upload");
+      const { url } = await pre.json();
+
+      // 2) Upload file directly to Vercel Blob
+      const put = await fetch(url, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
+      if (!put.ok) throw new Error("Direct upload failed");
+
+      // 3) Ask server to process from blob URL
+      const res = await fetch("/api/process-from-blob", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blobUrl: url, title, comment, creation_time: creationTime })
+      });
+      if (!res.ok) throw new Error(`Processing failed (${res.status})`);
       // Refresh Jobs list
       router.refresh();
       setFile(null);
