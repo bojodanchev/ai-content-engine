@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { getSessionUser } from "@/lib/session";
 import Link from "next/link";
 import UploadClient from "./UploadClient";
+import { getDb } from "@/lib/db";
 
 export default function DashboardPage() {
   const sessionId = cookies().get("ace_session_id")?.value;
@@ -29,20 +30,24 @@ export default function DashboardPage() {
   );
 }
 
-function JobsList({ userId }: { userId: string }) {
-  // This is a server component; read from SQLite directly
-  const { getDb } = require("@/lib/db");
+async function JobsList({ userId }: { userId: string }) {
   const prisma = getDb();
-  const rows = prisma.job.findMany({
-    where: { userId },
-    select: { id: true, inputFilename: true, outputFilename: true, status: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-  }) as any;
+  let rows: any[] = [];
+  try {
+    const result = await prisma.job.findMany({
+      where: { userId },
+      select: { id: true, inputFilename: true, outputFilename: true, status: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
+    rows = Array.isArray(result) ? result : [];
+  } catch (_e) {
+    rows = [];
+  }
 
   return (
     <div className="mt-3 grid gap-2">
-      {(rows as any).map((r: any) => (
+      {rows.map((r: any) => (
         <div key={r.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-sm flex items-center justify-between">
           <div>
             <div className="font-medium">{r.inputFilename}</div>
