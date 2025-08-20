@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
   const sessionId = cookies().get("ace_session_id")?.value;
   const sessionUser = sessionId ? getSessionUser(sessionId) : null;
   const fallbackUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
-  const userId = sessionUser?.userId || fallbackUserId;
+  const userIdRaw = sessionUser?.userId || fallbackUserId;
+  const userId = String(userIdRaw || "").trim();
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { filename, contentType } = await req.json().catch(() => ({}));
@@ -30,14 +31,15 @@ export async function POST(req: NextRequest) {
 
   const jobId = crypto.randomUUID();
   const datePrefix = new Date().toISOString().slice(0,10);
-  const key = `uploads/${userId}/${datePrefix}/${jobId}-${filename}`;
+  const safeFilename = filename.replace(/\s+/g, "_");
+  const key = `uploads/${userId}/${datePrefix}/${jobId}-${safeFilename}`;
 
-  const putCmd = new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType });
+  const putCmd = new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType, ACL: "bucket-owner-full-control" as any });
   const url = await getSignedUrl(s3, putCmd, { expiresIn: 3600 });
 
   const db = getDb();
   await db.user.upsert({ where: { id: userId }, update: {}, create: { id: userId, username: null, avatarUrl: null } });
   await db.job.create({ data: { id: jobId, userId, inputFilename: key, status: "queued", metaJson: JSON.stringify({ storage: "s3", bucket, key }) } });
 
-  return Response.json({ ok: true, jobId, url, bucket, key });
+  return Response.json({ ok: true, jobId, url, bucket, key, debug: { region, contentType, key } });
 }
