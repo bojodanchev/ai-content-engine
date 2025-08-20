@@ -60,7 +60,9 @@ export default function UploadClient() {
       form.append("file", file);
       const s3Res = await fetch(upload.url, { method: "POST", body: form, mode: "cors" as any });
       if (!s3Res.ok && s3Res.status !== 201) {
-        throw new Error(`S3 upload failed (${s3Res.status})`);
+        let body = "";
+        try { body = await s3Res.text(); } catch {}
+        throw new Error(`S3 upload failed (${s3Res.status})${body ? `: ${body.slice(0,300)}` : ""}`);
       }
       setJobId(jid);
       setStatus("File uploaded to S3. Ready to process.");

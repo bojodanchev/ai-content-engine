@@ -47,9 +47,19 @@ export async function POST(req: NextRequest) {
     Expires: 3600,
   });
 
-  const db = getDb();
-  await db.user.upsert({ where: { id: userId }, update: {}, create: { id: userId, username: null, avatarUrl: null } });
-  await db.job.create({ data: { id: jobId, userId, inputFilename: key, status: "queued", metaJson: JSON.stringify({ storage: "s3", bucket, key }) } });
-
-  return Response.json({ ok: true, jobId, upload: policy });
+  // Allow CORS from the app at the presign response level (frontend still needs bucket CORS)
+  const response = { ok: true, jobId, upload: policy } as const;
+  return new Response(JSON.stringify(response), {
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+  });
+  
+  // Note: job is created after presign so we return presign faster
+  // fire-and-forget DB writes
+  try {
+    const db = getDb();
+    await db.user.upsert({ where: { id: userId }, update: {}, create: { id: userId, username: null, avatarUrl: null } });
+    await db.job.create({ data: { id: jobId, userId, inputFilename: key, status: "queued", metaJson: JSON.stringify({ storage: "s3", bucket, key }) } });
+  } catch (e) {
+    console.error("[uploads/init] db error", e);
+  }
 }
