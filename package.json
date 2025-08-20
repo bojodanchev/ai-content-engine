@@ -23,6 +23,7 @@
     "react-dom": "^18.3.1",
     "@aws-sdk/client-s3": "^3.637.0",
     "@aws-sdk/s3-request-presigner": "^3.637.0",
+    "@aws-sdk/s3-presigned-post": "^3.637.0",
     "@aws-sdk/client-sqs": "^3.637.0"
   },
   "devDependencies": {
