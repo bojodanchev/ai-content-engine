@@ -1,3 +1,4 @@
+import "server-only";
 import ffmpegPath from "@ffmpeg-installer/ffmpeg";
 import ffprobeStatic from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
