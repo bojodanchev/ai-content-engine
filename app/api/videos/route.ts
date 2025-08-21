@@ -1,14 +1,12 @@
 import { NextRequest } from "next/server";
-import { getVerifiedWhopUser } from "@/lib/whopAuth";
+import { resolveUserIdOrCreateGuest } from "@/lib/whopAuth";
 import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(_req: NextRequest) {
-  const verified = await getVerifiedWhopUser();
-  const userId = String(verified?.userId || "").trim();
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = String(await resolveUserIdOrCreateGuest()).trim();
 
   try {
     const db = getDb();

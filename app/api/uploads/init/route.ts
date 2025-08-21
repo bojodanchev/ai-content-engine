@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getVerifiedWhopUser } from "@/lib/whopAuth";
+import { resolveUserIdOrCreateGuest } from "@/lib/whopAuth";
 import { getDb } from "@/lib/db";
 import crypto from "crypto";
 import { S3Client } from "@aws-sdk/client-s3";
@@ -9,9 +9,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const verified = await getVerifiedWhopUser();
-  const userId = verified?.userId;
-  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await resolveUserIdOrCreateGuest();
 
   const { filename, contentType } = await req.json().catch(() => ({}));
   if (!filename || !contentType) return Response.json({ error: "filename and contentType required" }, { status: 400 });

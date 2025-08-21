@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import * as jose from "jose";
 
 export type VerifiedWhop = { userId: string } | null;
@@ -29,6 +29,19 @@ export async function getVerifiedWhopUser(): Promise<VerifiedWhop> {
   } catch {
     return null;
   }
+}
+
+// Stronger helper for routes: returns a userId and ensures guest cookie exists
+export async function resolveUserIdOrCreateGuest(): Promise<string> {
+  const verified = await getVerifiedWhopUser();
+  if (verified?.userId) return verified.userId;
+  const store = cookies();
+  const existing = store.get("ace_guest_id")?.value;
+  if (existing) return existing;
+  const id = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  const guest = `guest_${id}`;
+  store.set("ace_guest_id", guest, { httpOnly: true, sameSite: "none", secure: true, path: "/", maxAge: 60 * 60 * 24 * 7 });
+  return guest;
 }
 
 

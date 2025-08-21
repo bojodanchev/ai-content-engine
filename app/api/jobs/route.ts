@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getVerifiedWhopUser } from "@/lib/whopAuth";
+import { resolveUserIdOrCreateGuest } from "@/lib/whopAuth";
 import { getDb } from "@/lib/db";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
@@ -8,12 +8,7 @@ export const runtime = "nodejs";
 
 // GET /api/jobs - List user's jobs
 export async function GET(req: NextRequest) {
-  const verified = await getVerifiedWhopUser();
-  const effectiveUserId = String(verified?.userId || "").trim();
-  
-  if (!effectiveUserId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const effectiveUserId = String(await resolveUserIdOrCreateGuest()).trim();
 
   try {
     const db = getDb();
@@ -32,12 +27,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/jobs - Enqueue processing job (or inline when WORKER_MODE=inline)
 export async function POST(req: NextRequest) {
-  const verified = await getVerifiedWhopUser();
-  const effectiveUserId = String(verified?.userId || "").trim();
-  
-  if (!effectiveUserId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const effectiveUserId = String(await resolveUserIdOrCreateGuest()).trim();
 
   try {
     const { jobId, preset = "default" } = await req.json();
