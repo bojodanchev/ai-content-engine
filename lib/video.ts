@@ -124,17 +124,29 @@ class ExecError extends Error {
 }
 
 async function run(bin: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(bin, args);
+  const attempt = (b: string): Promise<{ stdout: string; stderr: string }> => new Promise((resolve, reject) => {
+    const child = spawn(b, args);
     let stdout = ""; let stderr = "";
     child.stdout?.on("data", d => stdout += String(d));
     child.stderr?.on("data", d => stderr += String(d));
-    child.on("error", (err) => reject(new ExecError(err?.message || "spawn error", { exitCode: null, stderr, stdout, bin, args })));
+    child.on("error", (err: any) => reject(new ExecError(err?.message || "spawn error", { exitCode: null, stderr, stdout, bin: b, args })));
     child.on("close", (code) => {
       if (code === 0) resolve({ stdout, stderr });
-      else reject(new ExecError(stderr || `exit ${code}`, { exitCode: code ?? null, stderr, stdout, bin, args }));
+      else reject(new ExecError(stderr || `exit ${code}`, { exitCode: code ?? null, stderr, stdout, bin: b, args }));
     });
   });
+
+  try {
+    return await attempt(bin);
+  } catch (e: any) {
+    const msg = String(e?.message || e || "");
+    if (msg.includes("ENOENT") && bin !== "ffmpeg" && bin !== "ffprobe") {
+      // Retry with PATH-resolved binary name as last resort
+      const fallback = args.includes("-show_format") ? "ffprobe" : "ffmpeg";
+      return await attempt(fallback);
+    }
+    throw e;
+  }
 }
 
 
