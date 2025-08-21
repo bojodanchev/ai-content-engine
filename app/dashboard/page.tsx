@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 import UploadClient from "./UploadClient";
 import JobsList from "./JobsList";
+import JobsClient from "./JobsClient";
 
 export default async function DashboardPage() {
   const sessionId = cookies().get("ace_session_id")?.value;
@@ -39,7 +40,11 @@ export default async function DashboardPage() {
           
           <div>
             <h2 className="text-xl font-semibold mb-4">Your Jobs</h2>
+            {/* SSR list + client poller to ensure UI updates quickly */}
             <JobsList userId={effectiveUserId} />
+            <div className="mt-4">
+              <JobsClient />
+            </div>
           </div>
         </div>
       </div>
