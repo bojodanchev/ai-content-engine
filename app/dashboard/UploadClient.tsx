@@ -166,7 +166,7 @@ export default function UploadClient() {
           )}
         </button>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <button
             onClick={startProcessing}
             disabled={isProcessing}
