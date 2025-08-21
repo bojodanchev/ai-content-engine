@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSessionUser } from "@/lib/session";
-import { cookies } from "next/headers";
+import { getVerifiedWhopUser } from "@/lib/whopAuth";
 import { getDb } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -11,10 +10,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const sessionId = cookies().get("ace_session_id")?.value;
-  const sessionUser = sessionId ? getSessionUser(sessionId) : null;
-  const fallbackUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
-  const effectiveUserId = sessionUser?.userId || fallbackUserId;
+  const verified = await getVerifiedWhopUser();
+  const effectiveUserId = verified?.userId || null;
   
   if (!effectiveUserId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSessionUser } from "@/lib/session";
-import { cookies } from "next/headers";
+import { getVerifiedWhopUser } from "@/lib/whopAuth";
 import { getDb } from "@/lib/db";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
@@ -9,10 +8,8 @@ export const runtime = "nodejs";
 
 // GET /api/jobs - List user's jobs
 export async function GET(req: NextRequest) {
-  const sessionId = cookies().get("ace_session_id")?.value;
-  const sessionUser = sessionId ? getSessionUser(sessionId) : null;
-  const fallbackUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
-  const effectiveUserId = String((sessionUser?.userId || fallbackUserId || "")).trim();
+  const verified = await getVerifiedWhopUser();
+  const effectiveUserId = String(verified?.userId || "").trim();
   
   if (!effectiveUserId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,10 +32,8 @@ export async function GET(req: NextRequest) {
 
 // POST /api/jobs - Enqueue processing job (or inline when WORKER_MODE=inline)
 export async function POST(req: NextRequest) {
-  const sessionId = cookies().get("ace_session_id")?.value;
-  const sessionUser = sessionId ? getSessionUser(sessionId) : null;
-  const fallbackUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
-  const effectiveUserId = String((sessionUser?.userId || fallbackUserId || "")).trim();
+  const verified = await getVerifiedWhopUser();
+  const effectiveUserId = String(verified?.userId || "").trim();
   
   if (!effectiveUserId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });

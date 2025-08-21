@@ -157,18 +157,26 @@ export default function UploadClient() {
         <button
           onClick={uploadFile}
           disabled={!file || isUploading}
-          className="w-fit rounded-xl px-4 py-2.5 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-400 text-black font-semibold disabled:opacity-50 hover:opacity-90 transition"
+          className={`w-fit rounded-xl px-4 py-2.5 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-400 text-black font-semibold hover:opacity-90 transition ${(!file || isUploading) ? "opacity-50" : ""} ${isUploading ? "animate-pulse" : ""}`}
         >
-          {isUploading ? "Uploading…" : "Upload Video"}
+          {isUploading ? (
+            <span className="inline-flex items-center gap-2"><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> Uploading…</span>
+          ) : (
+            "Upload Video"
+          )}
         </button>
       ) : (
         <div className="space-y-3">
           <button
             onClick={startProcessing}
             disabled={isProcessing}
-            className="w-fit rounded-xl px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-400 text-black font-semibold disabled:opacity-50 hover:opacity-90 transition"
+            className={`w-fit rounded-xl px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-400 text-black font-semibold hover:opacity-90 transition ${isProcessing ? "opacity-70 animate-pulse" : ""}`}
           >
-            {isProcessing ? "Processing…" : "Start Processing"}
+            {isProcessing ? (
+              <span className="inline-flex items-center gap-2"><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> Processing…</span>
+            ) : (
+              "Start Processing"
+            )}
           </button>
           <button
             onClick={resetForm}

@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { cookies } from "next/headers";
-import { getSessionUser } from "@/lib/session";
+import { getVerifiedWhopUser } from "@/lib/whopAuth";
 import { getDb } from "@/lib/db";
 import crypto from "crypto";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -10,11 +9,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const sessionId = cookies().get("ace_session_id")?.value;
-  const sessionUser = sessionId ? getSessionUser(sessionId) : null;
-  const fallbackUserId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
-  const userIdRaw = sessionUser?.userId || fallbackUserId;
-  const userId = String(userIdRaw || "").trim();
+  const verified = await getVerifiedWhopUser();
+  const userId = String(verified?.userId || "").trim();
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { filename, contentType } = await req.json().catch(() => ({}));
