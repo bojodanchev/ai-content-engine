@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       try {
         await db.job.update({ where: { id: jobId }, data: { status: "processing" } });
         const { runFfmpegWithMetadata, extractMetadata } = await import("@/lib/video");
+        console.log("[inline] envPaths", { FFMPEG_PATH: process.env.FFMPEG_PATH, FFPROBE_PATH: process.env.FFPROBE_PATH });
         const path = await import("path");
         const { S3Client, GetObjectCommand } = await import("@aws-sdk/client-s3");
         const { default: streamToBuffer } = await import("@/lib/streamsToBuffer").catch(() => ({ default: null as any }));
