@@ -56,34 +56,51 @@ async function handleMessage(body) {
   const buf = await streamToBuffer(obj.Body);
   fs.writeFileSync(tmpIn, buf);
 
-  // process (copy-mode first)
-  const baseArgs = [
-    "-y", "-i", tmpIn,
-    "-map", "0",
-    "-c", "copy",
-    "-map_metadata", "-1",
-    "-metadata", `title=AI Content Engine export`,
-    "-metadata", `comment=job_id=${jobId}`,
-    "-metadata", `creation_time=${new Date().toISOString()}`,
-  ];
-  const args = container === "webm" ? [...baseArgs, tmpOut] : [...baseArgs, "-movflags", "use_metadata_tags+faststart", tmpOut];
-  try {
+  // Very light transforms to alter fingerprint while preserving perceived quality
+  // - Video: tiny luma offset via LUT (+/-1) and enforce even dimensions
+  // - Audio: up to 1% pitch shift using asetrate + atempo to preserve duration
+  // Choose deterministic deltas from jobId to keep idempotency
+  function pseudoRandomFromString(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) h = (h ^ str.charCodeAt(i)) * 16777619 >>> 0;
+    return (h % 10000) / 10000; // 0..1
+  }
+  const r = pseudoRandomFromString(jobId);
+  const pitchDelta = (r * 0.02) - 0.01; // -1% .. +1%
+  const lumaOffset = (r < 0.5 ? 1 : -1); // +1 or -1
+
+  if (container === "webm") {
+    // For WebM keep metadata-only to avoid heavy VP9/Opus re-encode in Fargate
+    const args = [
+      "-y", "-i", tmpIn,
+      "-map", "0",
+      "-c", "copy",
+      "-map_metadata", "-1",
+      "-metadata", `title=AI Content Engine export`,
+      "-metadata", `comment=job_id=${jobId}`,
+      "-metadata", `creation_time=${new Date().toISOString()}`,
+      tmpOut,
+    ];
     await run("ffmpeg", args);
-  } catch (e) {
-    // fallback transcode
-    const t = [
+  } else {
+    // MP4/MOV minimal, near-lossless transcode with micro transforms
+    const vf = `scale=trunc(iw/2)*2:trunc(ih/2)*2,lut=y='clip(val+${lumaOffset},0,255)'`;
+    const pitch = 1 + pitchDelta;
+    const af = `asetrate=48000*${pitch.toFixed(5)},atempo=${(1 / pitch).toFixed(5)},aresample=48000`;
+    const args = [
       "-y", "-i", tmpIn,
       "-map_metadata", "-1",
       "-metadata", `title=AI Content Engine export`,
       "-metadata", `comment=job_id=${jobId}`,
       "-metadata", `creation_time=${new Date().toISOString()}`,
-      ...(container === "webm" ? [] : ["-movflags", "use_metadata_tags+faststart"]),
+      "-movflags", "use_metadata_tags+faststart",
       "-pix_fmt", "yuv420p",
-      "-c:v", "libx264",
-      "-c:a", "aac",
+      "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
+      "-vf", vf,
+      "-c:a", "aac", "-ar", "48000", "-af", af,
       tmpOut,
     ];
-    await run("ffmpeg", t);
+    await run("ffmpeg", args);
   }
 
   // upload processed
@@ -96,7 +113,7 @@ async function handleMessage(body) {
     [
       'completed',
       path.basename(tmpOut),
-      JSON.stringify({ processedKey, preset, processedAt: new Date().toISOString() }),
+      JSON.stringify({ processedKey, preset, processedAt: new Date().toISOString(), transform: { pitchDelta, lumaOffset } }),
       jobId,
     ]
   );
