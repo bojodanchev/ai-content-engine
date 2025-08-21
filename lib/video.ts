@@ -10,8 +10,9 @@ import fs from "fs";
 
 // Configure ffmpeg/ffprobe paths with fallbacks for serverless environments
 // Prefer library-resolved binary paths; fall back to env only if necessary
-const resolvedFfmpeg = (ffmpegStatic as unknown as string) || process.env.FFMPEG_PATH || "/var/task/node_modules/ffmpeg-static/ffmpeg" || "ffmpeg";
-const resolvedFfprobe = (ffprobeStatic?.path as string) || process.env.FFPROBE_PATH || "/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe" || "ffprobe";
+// Prefer explicit env overrides to avoid Next bundler rewriting paths
+const resolvedFfmpeg = process.env.FFMPEG_PATH || (ffmpegStatic as unknown as string) || "/var/task/node_modules/ffmpeg-static/ffmpeg" || "ffmpeg";
+const resolvedFfprobe = process.env.FFPROBE_PATH || (ffprobeStatic?.path as string) || "/var/task/node_modules/ffprobe-static/bin/linux/x64/ffprobe" || "ffprobe";
 // fluent-ffmpeg removed; we will spawn binaries directly
 try {
   const ff = resolvedFfmpeg;
