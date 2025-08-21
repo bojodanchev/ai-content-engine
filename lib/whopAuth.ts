@@ -8,9 +8,12 @@ export async function getVerifiedWhopUser(): Promise<VerifiedWhop> {
   const hdrs = await headers();
   const token = hdrs.get("x-whop-user-token");
   if (!token) {
-    // fallback to cookie set by middleware if present
-    const cookieUid = (await headers()).get("cookie")?.match(/ace_whop_uid=([^;]+)/)?.[1];
-    if (cookieUid) return { userId: decodeURIComponent(cookieUid) };
+    // fallback to cookie set by middleware if present, or guest id if enabled
+    const cookieHeader = hdrs.get("cookie") || "";
+    const mUid = cookieHeader.match(/ace_whop_uid=([^;]+)/);
+    if (mUid?.[1]) return { userId: decodeURIComponent(mUid[1]) };
+    const mGuest = cookieHeader.match(/ace_guest_id=([^;]+)/);
+    if (mGuest?.[1]) return { userId: decodeURIComponent(mGuest[1]) };
     return null;
   }
   try {
