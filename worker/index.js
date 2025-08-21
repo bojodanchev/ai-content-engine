@@ -57,8 +57,8 @@ async function handleMessage(body) {
   fs.writeFileSync(tmpIn, buf);
 
   // Very light transforms to alter fingerprint while preserving perceived quality
-  // - Video: tiny luma offset via LUT (+/-1) and enforce even dimensions
-  // - Audio: up to 1% pitch shift using asetrate + atempo to preserve duration
+  // - Video: scale to even dims, slight eq tweak, tiny temporal noise, micro drawbox for 1–2 frames
+  // - Audio: ±0.2% pitch shift using asetrate + atempo to preserve duration
   // Choose deterministic deltas from jobId to keep idempotency
   function pseudoRandomFromString(str) {
     let h = 2166136261;
@@ -66,8 +66,8 @@ async function handleMessage(body) {
     return (h % 10000) / 10000; // 0..1
   }
   const r = pseudoRandomFromString(jobId);
-  const pitchDelta = (r * 0.02) - 0.01; // -1% .. +1%
-  const lumaOffset = (r < 0.5 ? 1 : -1); // +1 or -1
+  const pitchDelta = (r * 0.004) - 0.002; // -0.2% .. +0.2%
+  const tMark = 0.15 + (r * 0.2); // overlay around 0.15s..0.35s
 
   if (container === "webm") {
     // For WebM keep metadata-only to avoid heavy VP9/Opus re-encode in Fargate
@@ -84,7 +84,7 @@ async function handleMessage(body) {
     await run("ffmpeg", args);
   } else {
     // MP4/MOV minimal, near-lossless transcode with micro transforms
-    const vf = `scale=trunc(iw/2)*2:trunc(ih/2)*2,lut=y='clip(val+${lumaOffset},0,255)'`;
+    const vf = `scale=trunc(iw/2)*2:trunc(ih/2)*2,eq=brightness=0.005:contrast=1.01:saturation=1.01,noise=alls=2:allf=t,drawbox=x=w-2:y=h-2:w=1:h=1:color=white@0.02:t=fill:enable='between(t,${tMark.toFixed(3)},${(tMark+0.04).toFixed(3)})'`;
     const pitch = 1 + pitchDelta;
     const af = `asetrate=48000*${pitch.toFixed(5)},atempo=${(1 / pitch).toFixed(5)},aresample=48000`;
     const args = [
@@ -113,7 +113,7 @@ async function handleMessage(body) {
     [
       'completed',
       path.basename(tmpOut),
-      JSON.stringify({ processedKey, preset, processedAt: new Date().toISOString(), transform: { pitchDelta, lumaOffset } }),
+      JSON.stringify({ processedKey, preset, processedAt: new Date().toISOString(), transform: { pitchDelta, eq: { brightness: 0.005, contrast: 1.01, saturation: 1.01 }, noise: { alls: 2, allf: 't' }, overlay: { tFrom: tMark, tTo: tMark + 0.04 } } }),
       jobId,
     ]
   );
