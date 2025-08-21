@@ -17,7 +17,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const bucket = process.env.AWS_S3_BUCKET as string;
   if (!region || !bucket) return new Response("storage not configured", { status: 500 });
 
-  const key = job.outputFilename ? `processed/${id}.${(job.outputFilename.split('.').pop() || 'mp4')}` : null;
+  // Prefer metaJson.processedKey written by the worker. If not present, derive from outputFilename pattern
+  let fallbackKey: string | null = null;
+  if (job.outputFilename) {
+    const ext = job.outputFilename.includes('.') ? job.outputFilename.split('.').pop() : 'mp4';
+    fallbackKey = `processed/${id}.${ext}`;
+  }
   // If metaJson contains processedKey, prefer it
   try {
     const meta = job.metaJson ? JSON.parse(job.metaJson) : null;
@@ -28,9 +33,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
   } catch {}
 
-  if (!key) return new Response("not ready", { status: 409 });
+  if (!fallbackKey) return new Response("not ready", { status: 409 });
   const s3 = new S3Client({ region, credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID as string, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string } });
-  const url = await getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: 3600 });
+  const url = await getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: fallbackKey }), { expiresIn: 3600 });
   return Response.redirect(url, 302);
 }
 

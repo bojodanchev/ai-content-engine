@@ -2,7 +2,6 @@ import { getSessionUser } from "@/lib/session";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 import UploadClient from "./UploadClient";
-import JobsList from "./JobsList";
 import JobsClient from "./JobsClient";
 
 export const dynamic = "force-dynamic";
@@ -42,11 +41,8 @@ export default async function DashboardPage() {
           
           <div>
             <h2 className="text-xl font-semibold mb-4">Your Jobs</h2>
-            {/* SSR list + client poller to ensure UI updates quickly */}
-            <JobsList userId={effectiveUserId} />
-            <div className="mt-4">
-              <JobsClient />
-            </div>
+            {/* Use client poller only to avoid stale SSR snapshots */}
+            <JobsClient />
           </div>
         </div>
       </div>
