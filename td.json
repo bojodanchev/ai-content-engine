@@ -1,0 +1,59 @@
+{
+    "family": "ace-worker",
+    "taskRoleArn": "arn:aws:iam::049930841128:role/ace-worker-task-role",
+    "executionRoleArn": "arn:aws:iam::049930841128:role/ace-worker-exec-role",
+    "networkMode": "awsvpc",
+    "cpu": "512",
+    "memory": "2048",
+    "containerDefinitions": [
+        {
+            "name": "ace-worker",
+            "image": "049930841128.dkr.ecr.eu-north-1.amazonaws.com/ace-worker:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "containerPort": 80,
+                    "hostPort": 80,
+                    "protocol": "tcp",
+                    "name": "ace-worker-80-tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "AWS_REGION",
+                    "value": "eu-north-1"
+                },
+                {
+                    "name": "DATABASE_URL",
+                    "value": "<YOUR_NEON_DATABASE_URL>"
+                },
+                {
+                    "name": "AWS_S3_BUCKET",
+                    "value": "vercelcontentenginebucket"
+                },
+                {
+                    "name": "AWS_SQS_QUEUE_URL",
+                    "value": "https://sqs.eu-north-1.amazonaws.com/049930841128/video-jobs"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/ace-worker",
+                    "awslogs-region": "eu-north-1",
+                    "awslogs-stream-prefix": "ace-worker"
+                }
+            },
+            "systemControls": []
+        }
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ]
+}
