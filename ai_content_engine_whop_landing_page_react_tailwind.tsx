@@ -54,10 +54,12 @@ export default function AIContentEngineLanding() {
           </div>
           <div className="flex items-center gap-3">
             <a
-              href="#demo"
+              href="https://whop.com/apps/app_MlBrjqKMGbX2MH/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm bg-white/10 hover:bg-white/15 border border-white/10 transition"
             >
-              <BadgeCheck className="h-4 w-4" /> Available on Whop
+              <BadgeCheck className="h-4 w-4" /> Install in my Whop
             </a>
             <a href="/dashboard" className="rounded-xl px-3 py-2 text-sm bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-400 text-black font-semibold hover:opacity-90 transition">
               Start Processing

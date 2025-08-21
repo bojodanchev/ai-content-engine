@@ -68,7 +68,7 @@ export default function UploadClient() {
         throw new Error(`S3 upload failed (${s3Res.status})${body ? `: ${body.slice(0,300)}` : ""}`);
       }
       setJobId(jid);
-      setStatus("File uploaded to S3. Ready to process.");
+      setStatus("File uploaded. Ready to process.");
       console.log("[UPLOAD-INIT]", { jobId: jid, url });
     } catch (e: any) {
       setError(e.message ?? "Upload failed");

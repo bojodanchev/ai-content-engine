@@ -28,9 +28,14 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">AI Content Engine</h1>
-          <p className="text-white/70">Transform your videos with unique metadata for social media</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">AI Content Engine</h1>
+            <p className="text-white/70">Transform your videos with unique metadata for social media</p>
+          </div>
+          <a href="/" className="rounded-xl px-3 py-2 text-sm border border-white/15 bg-white/5 hover:bg-white/10 transition" aria-label="Back to landing">
+            ← Back
+          </a>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-2">

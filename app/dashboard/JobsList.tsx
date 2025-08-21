@@ -104,7 +104,7 @@ export default async function JobsList({ userId }: JobsListProps) {
               {job.status === "completed" && (
                 <a 
                   href={`/api/download/processed/${encodeURIComponent(job.id)}`}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-black text-sm font-medium rounded-lg transition"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-400 text-black text-sm font-medium rounded-lg hover:opacity-90 transition"
                 >
                   📥 Download
                 </a>
