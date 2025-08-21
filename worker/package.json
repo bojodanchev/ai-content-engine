@@ -1,0 +1,13 @@
+{
+  "name": "ace-worker",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.637.0",
+    "@aws-sdk/client-sqs": "^3.637.0",
+    "@prisma/client": "^5.22.0"
+  }
+}
+
+
