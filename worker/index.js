@@ -2,7 +2,7 @@
 
 const { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } = require("@aws-sdk/client-sqs");
 const { S3Client, GetObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
-const { PrismaClient } = require("@prisma/client");
+const { Client: PgClient } = require("pg");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -19,7 +19,8 @@ if (!REGION || !QUEUE_URL || !BUCKET) {
 
 const sqs = new SQSClient({ region: REGION });
 const s3 = new S3Client({ region: REGION });
-const prisma = new PrismaClient();
+const pg = new PgClient({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+pg.connect().catch(err => { console.error("[worker] pg connect error", err); process.exit(1); });
 
 async function streamToBuffer(stream) {
   return new Promise((resolve, reject) => {
@@ -90,7 +91,15 @@ async function handleMessage(body) {
   const outBuf = fs.readFileSync(tmpOut);
   await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: processedKey, Body: outBuf, ContentType: "video/mp4" }));
 
-  await prisma.job.update({ where: { id: jobId }, data: { status: "completed", outputFilename: path.basename(tmpOut), metaJson: null } });
+  await pg.query(
+    'update "Job" set status=$1, "outputFilename"=$2, "updatedAt"=now(), "metaJson"=$3 where id=$4',
+    [
+      'completed',
+      path.basename(tmpOut),
+      JSON.stringify({ processedKey, preset, processedAt: new Date().toISOString() }),
+      jobId,
+    ]
+  );
   console.log("[worker] completed", { jobId, processedKey });
 }
 
@@ -104,6 +113,12 @@ async function loop() {
           await handleMessage(m.Body);
           await sqs.send(new DeleteMessageCommand({ QueueUrl: QUEUE_URL, ReceiptHandle: m.ReceiptHandle }));
         } catch (e) {
+          try {
+            await pg.query(
+              'update "Job" set status=$1, "updatedAt"=now(), "metaJson"=$2 where id=$3',
+              ['failed', JSON.stringify({ error: String(e) }), JSON.stringify(jobId).replace(/"/g,'').trim()]
+            );
+          } catch (_) {}
           console.error("[worker] job failed", e);
         }
       }
