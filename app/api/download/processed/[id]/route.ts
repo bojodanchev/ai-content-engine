@@ -28,14 +28,28 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const meta = job.metaJson ? JSON.parse(job.metaJson) : null;
     if (meta?.processedKey) {
       const s3 = new S3Client({ region, credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID as string, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string } });
-      const url = await getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: meta.processedKey }), { expiresIn: 3600 });
+      const downloadName = meta.processedKey.split("/").pop() || `${id}.mp4`;
+      const url = await getSignedUrl(
+        s3,
+        new GetObjectCommand({
+          Bucket: bucket,
+          Key: meta.processedKey,
+          ResponseContentDisposition: `attachment; filename="${downloadName}"`,
+        }),
+        { expiresIn: 3600 }
+      );
       return Response.redirect(url, 302);
     }
   } catch {}
 
   if (!fallbackKey) return new Response("not ready", { status: 409 });
   const s3 = new S3Client({ region, credentials: { accessKeyId: process.env.AWS_ACCESS_KEY_ID as string, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string } });
-  const url = await getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: fallbackKey }), { expiresIn: 3600 });
+  const fallbackName = fallbackKey.split("/").pop() || `${id}.mp4`;
+  const url = await getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: bucket, Key: fallbackKey, ResponseContentDisposition: `attachment; filename="${fallbackName}"` }),
+    { expiresIn: 3600 }
+  );
   return Response.redirect(url, 302);
 }
 
