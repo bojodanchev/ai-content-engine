@@ -5,6 +5,8 @@ import UploadClient from "./UploadClient";
 import JobsList from "./JobsList";
 import JobsClient from "./JobsClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const sessionId = cookies().get("ace_session_id")?.value;
   const sessionUser = sessionId ? getSessionUser(sessionId) : null;
