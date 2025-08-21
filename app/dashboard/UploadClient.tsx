@@ -166,7 +166,7 @@ export default function UploadClient() {
           )}
         </button>
       ) : (
-        <div className="space-y-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <button
             onClick={startProcessing}
             disabled={isProcessing}
