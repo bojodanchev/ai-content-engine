@@ -7,7 +7,12 @@ export type VerifiedWhop = { userId: string } | null;
 export async function getVerifiedWhopUser(): Promise<VerifiedWhop> {
   const hdrs = await headers();
   const token = hdrs.get("x-whop-user-token");
-  if (!token) return null;
+  if (!token) {
+    // fallback to cookie set by middleware if present
+    const cookieUid = (await headers()).get("cookie")?.match(/ace_whop_uid=([^;]+)/)?.[1];
+    if (cookieUid) return { userId: decodeURIComponent(cookieUid) };
+    return null;
+  }
   try {
     const publicKeyPem = `-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErz8a8vxvexHC0TLT91g7llOdDOsN\nuYiGEfic4Qhni+HMfRBuUphOh7F3k8QgwZc9UlL0AHmyYqtbhL9NuJes6w==\n-----END PUBLIC KEY-----`;
     const key = await jose.importSPKI(publicKeyPem, "ES256");
