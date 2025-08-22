@@ -75,11 +75,11 @@ export default function AIContentEngineLanding() {
           <div>
             <h1 className="text-4xl md:text-5xl font-semibold leading-tight">
               <span className="bg-gradient-to-r from-white via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">
-                Prepare your videos for every platform
+                Mass Marketing Made Easy
               </span>
             </h1>
             <p className="mt-4 text-white/70 max-w-xl">
-              Batch‑edit and standardize video metadata, quickly export platform‑friendly files, and keep professional quality across TikTok, Instagram, and YouTube.
+              Turn a single image or video into thousands of viral pieces of content. We recreate/refresh metadata for social clips and repurpose for every platform—templates do the heavy lifting while AI optimizes every layer, pixel, and setting.
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <button
@@ -148,18 +148,18 @@ export default function AIContentEngineLanding() {
         <div className="mt-4 grid md:grid-cols-3 gap-4">
           <Feature
             icon={<Settings2 className="h-5 w-5" />}
-            title="Complete metadata control"
-            desc="Edit titles, comments, creation timestamps, language tags, rotation, color info, and more across batches."
+            title="AI content multiplication"
+            desc="Repurpose a single input into many outputs. Ready‑to‑use presets plus AI optimization — you don’t fiddle with settings."
           />
           <Feature
             icon={<ShieldCheck className="h-5 w-5" />}
             title="Platform‑friendly presets"
-            desc="Export with presets tailored for TikTok, Instagram, and YouTube without compromising quality."
+            desc="TikTok, Instagram, YouTube presets with numerous hidden tweaks applied automatically for best reach."
           />
           <Feature
             icon={<Wand2 className="h-5 w-5" />}
             title="Smart suggestions"
-            desc="Auto‑suggest realistic metadata fields you can accept, tweak, or lock per file."
+            desc="Auto‑suggest realistic titles, tags, and timestamps you can accept or tweak in one click."
           />
           <Feature
             icon={<Zap className="h-5 w-5" />}
@@ -173,8 +173,8 @@ export default function AIContentEngineLanding() {
           />
           <Feature
             icon={<Database className="h-5 w-5" />}
-            title="Audit trail"
-            desc="SQLite‑backed history of jobs, inputs, and exports for easy rollbacks."
+            title="Uniqueness tweaks"
+            desc="Subtle video/audio modifications for uniqueness and safety applied on EVERY export."
           />
         </div>
       </section>
@@ -207,7 +207,7 @@ export default function AIContentEngineLanding() {
             ctaLabel="Upgrade to Pro"
             features={[
               "100 videos per month",
-              "Advanced metadata options",
+              "AI content repurposing",
               "Priority processing",
               "Batch operations",
             ]}
@@ -221,10 +221,18 @@ export default function AIContentEngineLanding() {
             ctaLabel="Contact & upgrade"
             features={[
               "Unlimited videos",
-              "Custom metadata templates",
+              "AI content repurposing",
               "White‑label options",
             ]}
           />
+        </div>
+      </section>
+
+      {/* Coming soon */}
+      <section className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+        <h2 className="text-xl font-semibold tracking-tight">Coming soon</h2>
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/80">
+          TikTok/Instagram growth SOP — prebuilt workflows to publish, test, and scale winning clips automatically.
         </div>
       </section>
 
