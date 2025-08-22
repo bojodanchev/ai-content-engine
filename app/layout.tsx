@@ -1,5 +1,6 @@
 import "../styles/globals.css";
 import type { ReactNode } from "react";
+import { WhopIframeSdkProvider } from "@whop/react";
 
 export const metadata = {
   title: "AI Content Engine",
@@ -10,9 +11,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="h-full">
       <body className="min-h-screen bg-[#0A0A0A] text-white">
-        {/* Attempt to load Whop iframe SDK when embedded; harmless elsewhere */}
-        <script src="https://cdn.whop.com/iframe-sdk.js" async />
-        {children}
+        {/* Wrap in provider so useIframeSdk works when embedded */}
+        <WhopIframeSdkProvider>
+          {children}
+        </WhopIframeSdkProvider>
       </body>
     </html>
   );
