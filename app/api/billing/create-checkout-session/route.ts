@@ -25,9 +25,10 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "WHOP_API_KEY is not configured" }, { status: 500 });
     }
 
-    // Create a subscription checkout session per Whop docs.
-    // If we have a userId, act on-behalf-of so Whop associates the purchase.
-    const api = userId ? whopApi.withUser(userId) : whopApi;
+    // Scope to your company and act on-behalf-of the purchasing user
+    const companyId = (process.env.NEXT_PUBLIC_WHOP_COMPANY_ID || "").trim();
+    const base = companyId ? whopApi.withCompany(companyId) : whopApi;
+    const api = userId ? base.withUser(userId) : base;
     const checkoutSession = await api.payments.createCheckoutSession({
       planId,
       metadata: {
