@@ -1,9 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useIframeSdk } from "@whop/react";
 
 export default function BillingClient() {
-  const iframeSdk = useIframeSdk();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,29 +46,15 @@ export default function BillingClient() {
         <button onClick={async () => {
           try {
             const res = await fetch('/api/billing/create-checkout-session', { method: 'POST', body: JSON.stringify({ plan: 'PRO' }) });
-            const inAppPurchase = await res.json();
-            if (inAppPurchase?.status === 'ok' || inAppPurchase?.client_secret) {
-              const result = await iframeSdk.inAppPurchase(inAppPurchase);
-              if (result.status !== 'ok' && inAppPurchase?.url) {
-                window.location.href = inAppPurchase.url;
-              }
-            } else if (inAppPurchase?.url) {
-              window.location.href = inAppPurchase.url;
-            }
+            const session = await res.json();
+            if (session?.url) window.location.href = session.url;
           } catch {}
         }} className="rounded-lg px-3 py-2 text-sm border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20">Upgrade to Pro ($9.99)</button>
         <button onClick={async () => {
           try {
             const res = await fetch('/api/billing/create-checkout-session', { method: 'POST', body: JSON.stringify({ plan: 'ENTERPRISE' }) });
-            const inAppPurchase = await res.json();
-            if (inAppPurchase?.status === 'ok' || inAppPurchase?.client_secret) {
-              const result = await iframeSdk.inAppPurchase(inAppPurchase);
-              if (result.status !== 'ok' && inAppPurchase?.url) {
-                window.location.href = inAppPurchase.url;
-              }
-            } else if (inAppPurchase?.url) {
-              window.location.href = inAppPurchase.url;
-            }
+            const session = await res.json();
+            if (session?.url) window.location.href = session.url;
           } catch {}
         }} className="rounded-lg px-3 py-2 text-sm border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20">Upgrade to Enterprise ($29.99)</button>
         <a href="https://whop.com" className="rounded-lg px-3 py-2 text-sm border border-white/15 hover:bg-white/10">Manage Billing</a>
