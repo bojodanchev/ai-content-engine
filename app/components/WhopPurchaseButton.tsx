@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useState } from "react";
+import { ensureWhopIframeSdk } from "@/lib/whopSdkClient";
 
 type PurchasePlan = "PRO" | "ENTERPRISE";
 
@@ -25,27 +26,7 @@ export default function WhopPurchaseButton({
       if (!res.ok) throw new Error("Failed to create checkout session");
       const checkout = await res.json();
       
-      const g: any = typeof window !== "undefined" ? window : {};
-      // Heuristics for SDK in Whop embed
-      let sdk =
-        g?.iframeSdk ||
-        g?.whopIframeSdk ||
-        g?.whop?.iframeSdk ||
-        g?.parent?.iframeSdk ||
-        g?.parent?.whopIframeSdk ||
-        g?.parent?.whop?.iframeSdk;
-
-      // In case the SDK initializes a moment after click, poll briefly
-      if (!sdk) {
-        await new Promise((r) => setTimeout(r, 400));
-        sdk =
-          g?.iframeSdk ||
-          g?.whopIframeSdk ||
-          g?.whop?.iframeSdk ||
-          g?.parent?.iframeSdk ||
-          g?.parent?.whopIframeSdk ||
-          g?.parent?.whop?.iframeSdk;
-      }
+      const sdk = await ensureWhopIframeSdk(2000);
 
       if (sdk && typeof sdk.inAppPurchase === "function") {
         // Open Whop modal in the embed
