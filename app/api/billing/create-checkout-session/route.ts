@@ -19,9 +19,16 @@ export async function POST(req: NextRequest) {
     const verified = await getVerifiedWhopUser().catch(() => null);
     const userId = verified?.userId || null;
 
-    // Create a subscription checkout session per Whop docs
-    // Create the checkout session as the app/company (do not act on-behalf-of)
-    const checkoutSession = await whopApi.payments.createCheckoutSession({
+    // Ensure API key exists to avoid confusing errors
+    const apiKey = process.env.WHOP_API_KEY;
+    if (!apiKey || !apiKey.trim()) {
+      return Response.json({ error: "WHOP_API_KEY is not configured" }, { status: 500 });
+    }
+
+    // Create a subscription checkout session per Whop docs.
+    // If we have a userId, act on-behalf-of so Whop associates the purchase.
+    const api = userId ? whopApi.withUser(userId) : whopApi;
+    const checkoutSession = await api.payments.createCheckoutSession({
       planId,
       metadata: {
         source: "ace",
@@ -31,8 +38,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // If Whop injects iframe SDK, the object above can be passed directly.
-    // Also include a hosted redirect fallback URL.
     return Response.json({ ...checkoutSession, redirectUrl: `/api/billing/checkout?plan=${plan}` });
   } catch (e: any) {
     console.error("[billing] createCheckoutSession failed", e?.message || e);
