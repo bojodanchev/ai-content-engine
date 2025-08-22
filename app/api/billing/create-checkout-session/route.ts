@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return Response.json(checkoutSession);
+  // In Whop environment, clients can pass this into iframeSdk.inAppPurchase
+  return Response.json({ ...checkoutSession, redirectUrl: `/api/billing/checkout?plan=${plan}` });
 }
 
 

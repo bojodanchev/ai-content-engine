@@ -22,9 +22,10 @@ function resolveCheckoutId(plan: string) {
   );
 }
 
-function buildCheckoutUrl(id: string, userId: string) {
-  // Whop supports /checkout/{id}; append app_user_id for association
-  return `https://whop.com/checkout/${id}?app_user_id=${encodeURIComponent(userId)}`;
+function buildCheckoutUrl(planId: string, userId: string) {
+  // Use query param style per payments docs; association via app_user_id
+  const qs = new URLSearchParams({ plan_id: planId, app_user_id: userId });
+  return `https://whop.com/checkout?${qs.toString()}`;
 }
 
 export async function POST(req: NextRequest) {
