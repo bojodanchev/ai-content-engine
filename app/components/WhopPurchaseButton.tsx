@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useState } from "react";
-import { ensureWhopIframeSdk } from "@/lib/whopSdkClient";
+import { useIframeSdk } from "@whop/react";
 
 type PurchasePlan = "PRO" | "ENTERPRISE";
 
@@ -15,6 +15,7 @@ export default function WhopPurchaseButton({
 }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const iframeSdk = useIframeSdk();
 
   const handleClick = useCallback(async () => {
     try {
@@ -30,12 +31,9 @@ export default function WhopPurchaseButton({
         throw new Error(t || `HTTP ${res.status}`);
       }
       const checkout = await res.json();
-      
-      const sdk = await ensureWhopIframeSdk(5000);
-
-      if (sdk && typeof sdk.inAppPurchase === "function") {
+      if (iframeSdk && typeof (iframeSdk as any).inAppPurchase === "function") {
         // Open Whop modal in the embed
-        const result = await sdk.inAppPurchase(checkout);
+        const result = await (iframeSdk as any).inAppPurchase(checkout);
         if (result?.status !== "ok") {
           setErr(result?.error || "Purchase cancelled");
         }
