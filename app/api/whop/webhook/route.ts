@@ -66,12 +66,16 @@ export async function POST(req: NextRequest) {
     return new Response("Bad JSON", { status: 400 });
   }
 
-  const eventType: string = payload?.type || payload?.event || payload?.name || "";
-  const userId: string | undefined = payload?.data?.user_id || payload?.user_id || payload?.data?.user?.id || payload?.user?.id;
-  // Try both product and access pass identifiers
+  const eventType: string = payload?.event || payload?.type || payload?.name || "";
+  // Extract userId from multiple possible shapes
+  const userId: string | undefined =
+    payload?.data?.user_id || payload?.user_id || payload?.data?.user?.id || payload?.user?.id ||
+    payload?.data?.membership?.user_id || payload?.data?.membership?.user?.id || payload?.membership?.user_id || payload?.membership?.user?.id;
+  // Try both product and access pass identifiers; also check membership container
   const relatedId: string | undefined =
-    payload?.data?.product_id || payload?.product_id || payload?.data?.product?.id ||
-    payload?.data?.access_pass_id || payload?.access_pass_id || payload?.data?.access_pass?.id;
+    payload?.data?.product_id || payload?.product_id || payload?.data?.product?.id || payload?.product?.id ||
+    payload?.data?.access_pass_id || payload?.access_pass_id || payload?.data?.access_pass?.id || payload?.access_pass?.id ||
+    payload?.data?.membership?.access_pass_id || payload?.data?.membership?.access_pass?.id || payload?.membership?.access_pass_id || payload?.membership?.access_pass?.id;
   if (!eventType || !userId) {
     return new Response("Missing fields", { status: 400 });
   }
