@@ -6,8 +6,12 @@ export const runtime = "nodejs";
 
 function mapProductToPlan(productId?: string | null): "PRO" | "ENTERPRISE" | null {
   if (!productId) return null;
+  // Prefer explicit server envs
   if (process.env.WHOP_PRO_PRODUCT_ID && productId === process.env.WHOP_PRO_PRODUCT_ID) return "PRO";
   if (process.env.WHOP_ENT_PRODUCT_ID && productId === process.env.WHOP_ENT_PRODUCT_ID) return "ENTERPRISE";
+  // Fallback to public access pass ids you provided
+  if (process.env.NEXT_PUBLIC_PRO_ACCESS_PASS_ID && productId === process.env.NEXT_PUBLIC_PRO_ACCESS_PASS_ID) return "PRO";
+  if (process.env.NEXT_PUBLIC_ENT_ACCESS_PASS_ID && productId === process.env.NEXT_PUBLIC_ENT_ACCESS_PASS_ID) return "ENTERPRISE";
   return null;
 }
 
