@@ -21,9 +21,33 @@ function loadScriptOnce(src: string): Promise<void> {
   });
 }
 
+function getSdkFrom(win: any): any | null {
+  if (!win) return null;
+  try {
+    return win.iframeSdk || win.whopIframeSdk || win.whop?.iframeSdk || null;
+  } catch {
+    return null;
+  }
+}
+
+function searchAncestorsForSdk(start: any, maxHops = 3): any | null {
+  let cur = start;
+  for (let i = 0; i <= maxHops; i++) {
+    const found = getSdkFrom(cur);
+    if (found && typeof found.inAppPurchase === "function") return found;
+    try {
+      if (!cur || cur.parent === cur) break;
+      cur = cur.parent;
+    } catch {
+      break;
+    }
+  }
+  return null;
+}
+
 export async function ensureWhopIframeSdk(timeoutMs = 2000): Promise<any | null> {
   const g: any = typeof window !== "undefined" ? window : {};
-  let sdk = g.iframeSdk || g.whopIframeSdk || g.whop?.iframeSdk || g.parent?.iframeSdk || g.parent?.whopIframeSdk || g.parent?.whop?.iframeSdk;
+  let sdk = searchAncestorsForSdk(g);
   if (sdk && typeof sdk.inAppPurchase === "function") return sdk;
 
   // Try to load from CDN if not present (harmless if 404)
@@ -33,7 +57,7 @@ export async function ensureWhopIframeSdk(timeoutMs = 2000): Promise<any | null>
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    sdk = g.iframeSdk || g.whopIframeSdk || g.whop?.iframeSdk || g.parent?.iframeSdk || g.parent?.whopIframeSdk || g.parent?.whop?.iframeSdk;
+    sdk = searchAncestorsForSdk(g);
     if (sdk && typeof sdk.inAppPurchase === "function") return sdk;
     await new Promise((r) => setTimeout(r, 100));
   }

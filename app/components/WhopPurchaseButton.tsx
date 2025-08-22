@@ -14,6 +14,7 @@ export default function WhopPurchaseButton({
   className?: string;
 }) {
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const handleClick = useCallback(async () => {
     try {
@@ -26,31 +27,35 @@ export default function WhopPurchaseButton({
       if (!res.ok) throw new Error("Failed to create checkout session");
       const checkout = await res.json();
       
-      const sdk = await ensureWhopIframeSdk(2000);
+      const sdk = await ensureWhopIframeSdk(3000);
 
       if (sdk && typeof sdk.inAppPurchase === "function") {
         // Open Whop modal in the embed
         const result = await sdk.inAppPurchase(checkout);
         if (result?.status !== "ok") {
-          // Fallback to redirect if modal fails/cancelled
-          window.location.href = checkout?.redirectUrl || `/api/billing/checkout?plan=${plan}`;
+          setErr(result?.error || "Purchase cancelled");
         }
       } else {
-        // Final fallback: open hosted checkout
-        window.location.href = checkout?.redirectUrl || `/api/billing/checkout?plan=${plan}`;
+        setErr("Whop in-app checkout is not available in this view.");
       }
     } catch (err) {
-      // Final fallback to redirect route
-      window.location.href = `/api/billing/checkout?plan=${plan}`;
+      setErr("Failed to start checkout.");
     } finally {
       setLoading(false);
     }
   }, [plan]);
 
   return (
-    <button onClick={handleClick} disabled={loading} className={className}>
-      {loading ? "Opening checkout…" : children}
-    </button>
+    <>
+      <button onClick={handleClick} disabled={loading} className={className}>
+        {loading ? "Opening checkout…" : children}
+      </button>
+      {err && (
+        <div className="mt-2 text-xs text-amber-300/90">
+          {err}
+        </div>
+      )}
+    </>
   );
 }
 
