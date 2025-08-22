@@ -31,7 +31,7 @@ export default function WhopPurchaseButton({
       }
       const checkout = await res.json();
       
-      const sdk = await ensureWhopIframeSdk(3000);
+      const sdk = await ensureWhopIframeSdk(5000);
 
       if (sdk && typeof sdk.inAppPurchase === "function") {
         // Open Whop modal in the embed
@@ -40,7 +40,17 @@ export default function WhopPurchaseButton({
           setErr(result?.error || "Purchase cancelled");
         }
       } else {
-        setErr("Whop in-app checkout is not available in this view.");
+        // Fallback: hosted checkout
+        const url = checkout?.redirectUrl || `/api/billing/checkout?plan=${plan}`;
+        try {
+          if (typeof window !== "undefined" && window.top) {
+            window.top.location.href = url;
+          } else {
+            window.location.href = url;
+          }
+        } catch {
+          window.location.href = url;
+        }
       }
     } catch (err: any) {
       setErr(err?.message || "Failed to start checkout.");
