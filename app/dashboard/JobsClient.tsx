@@ -29,7 +29,7 @@ export default function JobsClient() {
 
   useEffect(() => {
     fetchJobs();
-    const t = setInterval(fetchJobs, 5000);
+    const t = setInterval(fetchJobs, 2000);
     return () => clearInterval(t);
   }, []);
 
@@ -42,7 +42,9 @@ export default function JobsClient() {
         <div key={job.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-4 flex items-center justify-between">
           <div className="text-sm">
             <div className="font-medium text-white/90">{job.inputFilename?.split("/").pop() || job.id}</div>
-            <div className="text-white/60 text-xs">{job.status}</div>
+            <div className="text-white/60 text-xs">
+              {job.status === "queued" ? "queued – waiting for worker" : job.status}
+            </div>
           </div>
           {job.status === "completed" && (
             <a href={`/api/download/processed/${encodeURIComponent(job.id)}`} className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-400 text-black text-sm font-medium rounded-lg hover:opacity-90 transition">📥 Download</a>
