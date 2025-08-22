@@ -16,9 +16,10 @@ export async function GET() {
     try {
       const publicKeyPem = `-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErz8a8vxvexHC0TLT91g7llOdDOsN\nuYiGEfic4Qhni+HMfRBuUphOh7F3k8QgwZc9UlL0AHmyYqtbhL9NuJes6w==\n-----END PUBLIC KEY-----`;
       const key = await jose.importSPKI(publicKeyPem, "ES256");
+      const appId = (process.env.NEXT_PUBLIC_WHOP_APP_ID || "").trim();
       const { payload } = await jose.jwtVerify(token, key, {
         issuer: "urn:whopcom:exp-proxy",
-        audience: process.env.NEXT_PUBLIC_WHOP_APP_ID,
+        audience: appId,
       });
       decoded = { sub: payload.sub, aud: payload.aud };
     } catch (e: any) {
@@ -31,7 +32,7 @@ export async function GET() {
     aceWhopUid: aceWhopUid || null,
     aceGuestId: aceGuest || null,
     decoded,
-    appId: process.env.NEXT_PUBLIC_WHOP_APP_ID || null,
+    appId: (process.env.NEXT_PUBLIC_WHOP_APP_ID || "").trim() || null,
   });
 }
 

@@ -17,11 +17,12 @@ export async function getVerifiedWhopUser(): Promise<VerifiedWhop> {
     return null;
   }
   try {
+    const appId = (process.env.NEXT_PUBLIC_WHOP_APP_ID || "").trim();
     const publicKeyPem = `-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErz8a8vxvexHC0TLT91g7llOdDOsN\nuYiGEfic4Qhni+HMfRBuUphOh7F3k8QgwZc9UlL0AHmyYqtbhL9NuJes6w==\n-----END PUBLIC KEY-----`;
     const key = await jose.importSPKI(publicKeyPem, "ES256");
     const { payload } = await jose.jwtVerify(token, key, {
       issuer: "urn:whopcom:exp-proxy",
-      audience: process.env.NEXT_PUBLIC_WHOP_APP_ID,
+      audience: appId,
     });
     const sub = payload.sub;
     if (typeof sub !== "string" || !sub.trim()) return null;
