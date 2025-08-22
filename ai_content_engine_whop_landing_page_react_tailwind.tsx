@@ -178,6 +178,55 @@ export default function AIContentEngineLanding() {
         </div>
       </section>
 
+      {/* Plans */}
+      <section id="plans" className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+        <h2 className="text-xl font-semibold tracking-tight">Plans</h2>
+        <p className="mt-2 text-white/70 text-sm">Choose what fits your workflow. Start free and upgrade as you grow.</p>
+        <div className="mt-4 grid md:grid-cols-3 gap-4">
+          <PlanCard
+            name="Free"
+            price="$0"
+            period="/month"
+            highlight={false}
+            ctaHref="/dashboard"
+            ctaLabel="Get started"
+            features={[
+              "5 videos per month",
+              "Basic metadata changes",
+              "Standard processing speed",
+            ]}
+          />
+          <PlanCard
+            name="Pro"
+            price="$9.99"
+            period="/month"
+            highlight
+            badge="Most popular"
+            ctaHref="/dashboard"
+            ctaLabel="Upgrade to Pro"
+            features={[
+              "100 videos per month",
+              "Advanced metadata options",
+              "Priority processing",
+              "Batch operations",
+            ]}
+          />
+          <PlanCard
+            name="Enterprise"
+            price="$29.99"
+            period="/month"
+            highlight={false}
+            ctaHref="/dashboard"
+            ctaLabel="Contact & upgrade"
+            features={[
+              "Unlimited videos",
+              "Custom metadata templates",
+              "White‑label options",
+            ]}
+          />
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <h2 className="text-xl font-semibold tracking-tight">How it works</h2>
@@ -317,6 +366,40 @@ function Step({ num, icon, title, desc }: { num: number; icon: ReactNode; title:
       </div>
       <p className="mt-2 text-white/70 text-sm">{desc}</p>
     </li>
+  );
+}
+
+function PlanCard({ name, price, period, features, highlight, ctaHref, ctaLabel, badge }: {
+  name: string;
+  price: string;
+  period?: string;
+  features: string[];
+  highlight?: boolean;
+  ctaHref: string;
+  ctaLabel: string;
+  badge?: string;
+}) {
+  return (
+    <div className={`relative rounded-2xl border ${highlight ? "border-fuchsia-400/40" : "border-white/10"} bg-white/[0.04] p-4`}> 
+      {badge && (
+        <div className="absolute -top-3 right-3 text-[10px] px-2 py-1 rounded-full bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-400 text-black font-semibold">
+          {badge}
+        </div>
+      )}
+      <div className="flex items-baseline justify-between">
+        <div className="text-sm font-semibold">{name}</div>
+        <div className="text-lg font-semibold">{price}<span className="text-white/60 text-xs font-normal">{period}</span></div>
+      </div>
+      <ul className="mt-3 space-y-2 text-sm">
+        {features.map((f) => (
+          <li key={f} className="flex items-center gap-2 text-white/80">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-cyan-400" />
+            {f}
+          </li>
+        ))}
+      </ul>
+      <a href={ctaHref} className={`mt-4 inline-block w-full text-center rounded-xl px-3 py-2 text-sm border ${highlight ? "border-fuchsia-400/30 bg-fuchsia-400/10 hover:bg-fuchsia-400/20" : "border-white/15 bg-white/5 hover:bg-white/10"}`}>{ctaLabel}</a>
+    </div>
   );
 }
 
