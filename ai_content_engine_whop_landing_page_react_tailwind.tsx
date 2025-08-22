@@ -1,4 +1,5 @@
 import { useState, Fragment } from "react";
+import WhopPurchaseButton from "@/app/components/WhopPurchaseButton";
 import type { ReactNode } from "react";
 import {
   Wand2,
@@ -202,7 +203,7 @@ export default function AIContentEngineLanding() {
             period="/month"
             highlight
             badge="Most popular"
-            ctaHref="/api/billing/checkout?plan=PRO"
+            ctaHref="#"
             ctaLabel="Upgrade to Pro"
             features={[
               "100 videos per month",
@@ -216,7 +217,7 @@ export default function AIContentEngineLanding() {
             price="$29.99"
             period="/month"
             highlight={false}
-            ctaHref="/api/billing/checkout?plan=ENTERPRISE"
+            ctaHref="#"
             ctaLabel="Contact & upgrade"
             features={[
               "Unlimited videos",
@@ -398,7 +399,16 @@ function PlanCard({ name, price, period, features, highlight, ctaHref, ctaLabel,
           </li>
         ))}
       </ul>
-      <a href={ctaHref} className={`mt-4 inline-block w-full text-center rounded-xl px-3 py-2 text-sm border ${highlight ? "border-fuchsia-400/30 bg-fuchsia-400/10 hover:bg-fuchsia-400/20" : "border-white/15 bg-white/5 hover:bg-white/10"}`}>{ctaLabel}</a>
+      {ctaHref === "#" ? (
+        <WhopPurchaseButton
+          plan={name.toUpperCase() === "ENTERPRISE" ? "ENTERPRISE" : "PRO"}
+          className={`mt-4 inline-block w-full text-center rounded-xl px-3 py-2 text-sm border ${highlight ? "border-fuchsia-400/30 bg-fuchsia-400/10 hover:bg-fuchsia-400/20" : "border-white/15 bg-white/5 hover:bg-white/10"}`}
+        >
+          {ctaLabel}
+        </WhopPurchaseButton>
+      ) : (
+        <a href={ctaHref} className={`mt-4 inline-block w-full text-center rounded-xl px-3 py-2 text-sm border ${highlight ? "border-fuchsia-400/30 bg-fuchsia-400/10 hover:bg-fuchsia-400/20" : "border-white/15 bg-white/5 hover:bg-white/10"}`}>{ctaLabel}</a>
+      )}
     </div>
   );
 }

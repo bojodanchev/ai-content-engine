@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import WhopPurchaseButton from "@/app/components/WhopPurchaseButton";
 
 export default function BillingClient() {
   const [loading, setLoading] = useState(true);
@@ -43,8 +44,8 @@ export default function BillingClient() {
         </div>
       </div>
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <a href="/api/billing/checkout?plan=PRO" className="rounded-lg px-3 py-2 text-sm border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-center">Upgrade to Pro ($9.99)</a>
-        <a href="/api/billing/checkout?plan=ENTERPRISE" className="rounded-lg px-3 py-2 text-sm border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-center">Upgrade to Enterprise ($29.99)</a>
+        <WhopPurchaseButton plan="PRO" className="rounded-lg px-3 py-2 text-sm border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-center">Upgrade to Pro ($9.99)</WhopPurchaseButton>
+        <WhopPurchaseButton plan="ENTERPRISE" className="rounded-lg px-3 py-2 text-sm border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-center">Upgrade to Enterprise ($29.99)</WhopPurchaseButton>
         <a href="https://whop.com" className="rounded-lg px-3 py-2 text-sm border border-white/15 hover:bg-white/10">Manage Billing</a>
       </div>
     </div>
