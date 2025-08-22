@@ -58,12 +58,16 @@ export async function getActivePlanForUser(userId: string): Promise<Entitlements
     const proAccessPassId = process.env.NEXT_PUBLIC_PRO_ACCESS_PASS_ID;
     const entAccessPassId = process.env.NEXT_PUBLIC_ENT_ACCESS_PASS_ID;
     if (entAccessPassId) {
-      const hasEnt = await whopApi.access.checkIfUserHasAccessToAccessPass({ accessPassId: entAccessPassId, userId });
-      if (hasEnt) return PLAN_ENTITLEMENTS.ENTERPRISE;
+      const res = await whopApi.access.checkIfUserHasAccessToAccessPass({ accessPassId: entAccessPassId, userId });
+      if (res?.hasAccess && res?.accessLevel === "customer") {
+        return PLAN_ENTITLEMENTS.ENTERPRISE;
+      }
     }
     if (proAccessPassId) {
-      const hasPro = await whopApi.access.checkIfUserHasAccessToAccessPass({ accessPassId: proAccessPassId, userId });
-      if (hasPro) return PLAN_ENTITLEMENTS.PRO;
+      const res = await whopApi.access.checkIfUserHasAccessToAccessPass({ accessPassId: proAccessPassId, userId });
+      if (res?.hasAccess && res?.accessLevel === "customer") {
+        return PLAN_ENTITLEMENTS.PRO;
+      }
     }
   } catch {}
 
