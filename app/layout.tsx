@@ -9,7 +9,11 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-screen bg-[#0A0A0A] text-white">{children}</body>
+      <body className="min-h-screen bg-[#0A0A0A] text-white">
+        {/* Attempt to load Whop iframe SDK when embedded; harmless elsewhere */}
+        <script src="https://cdn.whop.com/iframe-sdk.js" async />
+        {children}
+      </body>
     </html>
   );
 }
