@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import crypto from "crypto";
 import { S3Client } from "@aws-sdk/client-s3";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
+import { canUserCreateJob, incrementMonthlyUsage } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,6 +14,17 @@ export async function POST(req: NextRequest) {
 
   const { filename, contentType } = await req.json().catch(() => ({}));
   if (!filename || !contentType) return Response.json({ error: "filename and contentType required" }, { status: 400 });
+
+  // Enforce plan quota before allowing presign
+  const gate = await canUserCreateJob(userId);
+  if (!gate.allowed) {
+    return Response.json({
+      error: "quota_exceeded",
+      message: "Your monthly quota has been reached. Upgrade to continue.",
+      entitlements: gate.entitlements,
+      usage: gate.usage,
+    }, { status: 402 });
+  }
 
   const bucket = process.env.AWS_S3_BUCKET as string;
   const region = process.env.AWS_REGION as string;
@@ -54,6 +66,7 @@ export async function POST(req: NextRequest) {
     const db = getDb();
     await db.user.upsert({ where: { id: userId }, update: {}, create: { id: userId, username: null, avatarUrl: null } });
     await db.job.create({ data: { id: jobId, userId, inputFilename: key, status: "queued", metaJson: JSON.stringify({ storage: "s3", bucket, key }) } });
+    await incrementMonthlyUsage(userId, 1);
   } catch (e) {
     console.error("[uploads/init] db error", e);
   }

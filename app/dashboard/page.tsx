@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 import UploadClient from "./UploadClient";
 import JobsClient from "./JobsClient";
+import BillingClient from "./BillingClient";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,11 @@ export default async function DashboardPage() {
             {/* Use client poller only to avoid stale SSR snapshots */}
             <JobsClient />
           </div>
+        </div>
+
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Billing</h2>
+          <BillingClient />
         </div>
       </div>
     </div>

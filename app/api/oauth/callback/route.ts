@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { whopApi } from "@/lib/whop";
 import { getDb } from "@/lib/db";
-import { getOrCreateSessionId, setSessionForUser } from "@/lib/session";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -17,21 +16,11 @@ export async function GET(request: Request) {
     redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/oauth/callback`,
     code,
   });
-  if (!('ok' in result) || !result.ok) {
-    return new Response('OAuth exchange failed', { status: 401 });
+  if (!("ok" in result) || !result.ok) {
+    return new Response("OAuth exchange failed", { status: 401 });
   }
-  const { accessToken, refreshToken, expiresAt } = result.tokens;
-
-  const me = await whopApi.me.getMe({ accessToken });
-
-  const db = getDb();
-  db.prepare(
-    `INSERT INTO users (id, username, avatar_url) VALUES (?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET username=excluded.username, avatar_url=excluded.avatar_url`
-  ).run(me.id, me.username ?? null, me.avatar_url ?? null);
-
-  const sessionId = getOrCreateSessionId();
-  setSessionForUser(sessionId, me.id, accessToken, refreshToken, expiresAt);
+  // We don't persist tokens here; identity is handled via Whop proxy header + middleware cookie.
+  // Optionally, we could fetch user profile with result.tokens.access_token when needed.
 
   return Response.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}${nextPath}`);
 }

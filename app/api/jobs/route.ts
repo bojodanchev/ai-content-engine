@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { resolveUserIdOrCreateGuest } from "@/lib/whopAuth";
 import { getDb } from "@/lib/db";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
+import { getActivePlanForUser } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -38,6 +39,9 @@ export async function POST(req: NextRequest) {
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });
 
     const inline = process.env.WORKER_MODE === "inline";
+
+    // Determine priority based on plan
+    const entitlements = await getActivePlanForUser(effectiveUserId);
 
     if (inline) {
       // Process immediately (temporary fallback until Fargate worker is live)
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
         });
         const afterMeta = await extractMetadata(outputPath).catch(() => null);
 
-        await db.job.update({ where: { id: jobId }, data: { status: "completed", outputFilename: path.basename(outputPath), metaJson: JSON.stringify({ before: beforeMeta, after: afterMeta, preset }), updatedAt: new Date() } });
+        await db.job.update({ where: { id: jobId }, data: { status: "completed", outputFilename: path.basename(outputPath), metaJson: JSON.stringify({ before: beforeMeta, after: afterMeta, preset, priority: entitlements.features.priorityProcessing }), updatedAt: new Date() } });
         return Response.json({ ok: true, completed: true });
       } catch (e: any) {
         const errObj = {
@@ -104,7 +108,7 @@ export async function POST(req: NextRequest) {
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
     }});
 
-    const payload = { jobId, userId: effectiveUserId, bucket: process.env.AWS_S3_BUCKET, key: job.inputFilename, preset };
+    const payload = { jobId, userId: effectiveUserId, bucket: process.env.AWS_S3_BUCKET, key: job.inputFilename, preset, priority: entitlements.features.priorityProcessing };
     await sqs.send(new SendMessageCommand({ QueueUrl: queueUrl, MessageBody: JSON.stringify(payload) }));
 
     return Response.json({ ok: true, enqueued: true });
