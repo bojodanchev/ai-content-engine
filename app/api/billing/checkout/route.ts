@@ -4,14 +4,46 @@ import { resolveUserIdOrCreateGuest } from "@/lib/whopAuth";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+function resolveCheckoutId(plan: string) {
+  const upper = String(plan || "PRO").toUpperCase();
+  if (upper === "ENTERPRISE") {
+    return (
+      process.env.WHOP_ENT_PRODUCT_ID ||
+      process.env.NEXT_PUBLIC_ENT_ACCESS_PASS_ID ||
+      process.env.NEXT_PUBLIC_ENT_PLAN_ID ||
+      null
+    );
+  }
+  return (
+    process.env.WHOP_PRO_PRODUCT_ID ||
+    process.env.NEXT_PUBLIC_PRO_ACCESS_PASS_ID ||
+    process.env.NEXT_PUBLIC_PRO_PLAN_ID ||
+    null
+  );
+}
+
+function buildCheckoutUrl(id: string, userId: string) {
+  // Whop supports /checkout/{id}; append app_user_id for association
+  return `https://whop.com/checkout/${id}?app_user_id=${encodeURIComponent(userId)}`;
+}
+
 export async function POST(req: NextRequest) {
   const userId = await resolveUserIdOrCreateGuest();
   const { plan } = await req.json().catch(() => ({ plan: "PRO" }));
-  const productId = plan === "ENTERPRISE" ? process.env.WHOP_ENT_PRODUCT_ID : process.env.WHOP_PRO_PRODUCT_ID;
-  if (!productId) return Response.json({ error: "Missing product configuration" }, { status: 500 });
-  // Redirect user to Whop product page with optional referral/context
-  const url = `https://whop.com/checkout/${productId}?app_user_id=${encodeURIComponent(userId)}`;
+  const id = resolveCheckoutId(plan);
+  if (!id) return Response.json({ error: "Missing plan configuration" }, { status: 500 });
+  const url = buildCheckoutUrl(id, userId);
   return Response.json({ url });
+}
+
+export async function GET(req: NextRequest) {
+  const userId = await resolveUserIdOrCreateGuest();
+  const u = new URL(req.url);
+  const plan = u.searchParams.get("plan") || "PRO";
+  const id = resolveCheckoutId(plan);
+  if (!id) return new Response("Missing plan configuration", { status: 500 });
+  const url = buildCheckoutUrl(id, userId);
+  return Response.redirect(url, 302);
 }
 
 

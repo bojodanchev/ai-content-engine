@@ -202,7 +202,7 @@ export default function AIContentEngineLanding() {
             period="/month"
             highlight
             badge="Most popular"
-            ctaHref="/dashboard"
+            ctaHref="/api/billing/checkout?plan=PRO"
             ctaLabel="Upgrade to Pro"
             features={[
               "100 videos per month",
@@ -216,7 +216,7 @@ export default function AIContentEngineLanding() {
             price="$29.99"
             period="/month"
             highlight={false}
-            ctaHref="/dashboard"
+            ctaHref="/api/billing/checkout?plan=ENTERPRISE"
             ctaLabel="Contact & upgrade"
             features={[
               "Unlimited videos",
