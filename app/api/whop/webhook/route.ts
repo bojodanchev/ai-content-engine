@@ -77,7 +77,14 @@ export async function POST(req: NextRequest) {
     payload?.data?.access_pass_id || payload?.access_pass_id || payload?.data?.access_pass?.id || payload?.access_pass?.id ||
     payload?.data?.membership?.access_pass_id || payload?.data?.membership?.access_pass?.id || payload?.membership?.access_pass_id || payload?.membership?.access_pass?.id;
   if (!eventType || !userId) {
-    return new Response("Missing fields", { status: 400 });
+    try {
+      console.log("[whop-webhook] ignored event due to missing fields", {
+        eventType,
+        hasUserId: Boolean(userId),
+        keys: Object.keys(payload || {}),
+      });
+    } catch {}
+    return Response.json({ ok: true, ignored: true, reason: "missing_fields", eventType }, { status: 200 });
   }
 
   const plan = mapProductToPlan(relatedId);
