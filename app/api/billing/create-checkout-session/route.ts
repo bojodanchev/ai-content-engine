@@ -18,14 +18,19 @@ export async function POST(req: NextRequest) {
     const hdrs = await headers();
     const verified = await getVerifiedWhopUser().catch(() => null);
     const userId = verified?.userId || null;
+    if (!userId) {
+      return Response.json({ error: "Missing Whop user context" }, { status: 401 });
+    }
 
     // Create a subscription checkout session per Whop docs
-    const checkoutSession = await whopApi.payments.createCheckoutSession({
+    // Set x-on-behalf-of so Whop knows which user is purchasing
+    const api = whopApi.withUser(userId);
+    const checkoutSession = await api.payments.createCheckoutSession({
       planId,
       metadata: {
         source: "ace",
         requestedPlan: plan,
-        userId: userId ?? "unknown",
+        userId,
         userAgent: hdrs.get("user-agent") || "",
       },
     });
