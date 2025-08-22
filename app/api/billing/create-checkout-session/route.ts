@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
   const verified = await getVerifiedWhopUser().catch(() => null);
   const userId = verified?.userId || null;
 
+  // Create a subscription checkout session per Whop docs
   const checkoutSession = await whopApi.payments.createCheckoutSession({
     planId,
     metadata: {
@@ -26,7 +27,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // In Whop environment, clients can pass this into iframeSdk.inAppPurchase
+  // If Whop injects iframe SDK, the object above can be passed directly.
+  // Also include a hosted redirect fallback URL.
   return Response.json({ ...checkoutSession, redirectUrl: `/api/billing/checkout?plan=${plan}` });
 }
 

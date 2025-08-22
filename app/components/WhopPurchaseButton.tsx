@@ -24,13 +24,28 @@ export default function WhopPurchaseButton({
       });
       if (!res.ok) throw new Error("Failed to create checkout session");
       const checkout = await res.json();
-
+      
       const g: any = typeof window !== "undefined" ? window : {};
-      const sdk =
-        g?.whop?.iframeSdk ||
+      // Heuristics for SDK in Whop embed
+      let sdk =
         g?.iframeSdk ||
-        g?.parent?.whop?.iframeSdk ||
-        g?.parent?.iframeSdk;
+        g?.whopIframeSdk ||
+        g?.whop?.iframeSdk ||
+        g?.parent?.iframeSdk ||
+        g?.parent?.whopIframeSdk ||
+        g?.parent?.whop?.iframeSdk;
+
+      // In case the SDK initializes a moment after click, poll briefly
+      if (!sdk) {
+        await new Promise((r) => setTimeout(r, 400));
+        sdk =
+          g?.iframeSdk ||
+          g?.whopIframeSdk ||
+          g?.whop?.iframeSdk ||
+          g?.parent?.iframeSdk ||
+          g?.parent?.whopIframeSdk ||
+          g?.parent?.whop?.iframeSdk;
+      }
 
       if (sdk && typeof sdk.inAppPurchase === "function") {
         // Open Whop modal in the embed
@@ -40,7 +55,7 @@ export default function WhopPurchaseButton({
           window.location.href = checkout?.redirectUrl || `/api/billing/checkout?plan=${plan}`;
         }
       } else {
-        // Fallback: open hosted checkout
+        // Final fallback: open hosted checkout
         window.location.href = checkout?.redirectUrl || `/api/billing/checkout?plan=${plan}`;
       }
     } catch (err) {
