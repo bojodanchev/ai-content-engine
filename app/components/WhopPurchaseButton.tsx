@@ -19,12 +19,16 @@ export default function WhopPurchaseButton({
   const handleClick = useCallback(async () => {
     try {
       setLoading(true);
+      setErr(null);
       const res = await fetch("/api/billing/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
       });
-      if (!res.ok) throw new Error("Failed to create checkout session");
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(t || `HTTP ${res.status}`);
+      }
       const checkout = await res.json();
       
       const sdk = await ensureWhopIframeSdk(3000);
@@ -38,8 +42,8 @@ export default function WhopPurchaseButton({
       } else {
         setErr("Whop in-app checkout is not available in this view.");
       }
-    } catch (err) {
-      setErr("Failed to start checkout.");
+    } catch (err: any) {
+      setErr(err?.message || "Failed to start checkout.");
     } finally {
       setLoading(false);
     }
