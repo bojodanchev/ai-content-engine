@@ -68,12 +68,15 @@ type MetaOverrides = {
   creation_time?: string;
 };
 
-export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOverrides) {
+type TransformProfile = "none" | "subtle";
+
+export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOverrides, opts?: { transformProfile?: TransformProfile }) {
   const dir = path.dirname(inputPath);
   const base = path.basename(inputPath, path.extname(inputPath));
   const ext = path.extname(inputPath).toLowerCase();
   const container: "mp4" | "mov" | "webm" = ext === ".webm" ? "webm" : ext === ".mov" ? "mov" : "mp4";
   const outputPath = path.join(dir, `${base}_processed${ext || ".mp4"}`);
+  const transformProfile: TransformProfile = opts?.transformProfile ?? "none";
   const metaArgsBase = [
     "-y", "-i", inputPath,
     "-map", "0",
@@ -83,13 +86,22 @@ export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOv
     "-metadata", `comment=${overrides.comment ?? `job_id=${Date.now()}`}`,
     "-metadata", `creation_time=${overrides.creation_time ?? new Date().toISOString()}`,
   ];
-  const copyArgs = container === "webm" ? [...metaArgsBase, outputPath] : [...metaArgsBase, "-movflags", "use_metadata_tags+faststart", outputPath];
-  try {
-    await run(resolvedFfmpeg, copyArgs);
-    if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) return { outputPath };
-  } catch (e) {
-    console.log("[ffmpeg] copy failed, will transcode", (e as any)?.message || e);
+  if (transformProfile === "none") {
+    const copyArgs = container === "webm" ? [...metaArgsBase, outputPath] : [...metaArgsBase, "-movflags", "use_metadata_tags+faststart", outputPath];
+    try {
+      await run(resolvedFfmpeg, copyArgs);
+      if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) return { outputPath };
+    } catch (e) {
+      console.log("[ffmpeg] copy failed, will transcode", (e as any)?.message || e);
+    }
   }
+  // Transcode path (also used when subtle transform is requested)
+  // Very light, visually subtle profile: minimal eq + tiny dithered noise
+  const vf = transformProfile === "subtle"
+    ? "eq=contrast=1.0:brightness=0.002:saturation=1.01,noise=alls=2:allf=t+u"
+    : undefined;
+  const af = transformProfile === "subtle" ? "firequalizer=gain_entry='entry(100,0);entry(1000,0.5);entry(8000,0)':channel_layout=stereo" : undefined;
+
   const transcodeArgs = [
     "-y", "-i", inputPath,
     "-map_metadata", "-1",
@@ -97,8 +109,10 @@ export async function runFfmpegWithMetadata(inputPath: string, overrides: MetaOv
     "-metadata", `comment=${overrides.comment ?? `job_id=${Date.now()}`}`,
     "-metadata", `creation_time=${overrides.creation_time ?? new Date().toISOString()}`,
     ...(container === "webm" ? [] : ["-movflags", "use_metadata_tags+faststart"]),
+    ...(vf ? ["-vf", vf] : []),
     "-pix_fmt", "yuv420p",
     "-c:v", "libx264",
+    ...(af ? ["-af", af] : []),
     "-c:a", "aac",
     outputPath,
   ];

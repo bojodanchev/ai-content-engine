@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 function mapProductToPlan(productOrAccessPassId?: string | null): "PRO" | "ENTERPRISE" | null {
   const id = productOrAccessPassId;
-  if (!productId) return null;
+  if (!id) return null;
   // Prefer explicit server envs
   if (process.env.WHOP_PRO_PRODUCT_ID && id === process.env.WHOP_PRO_PRODUCT_ID) return "PRO";
   if (process.env.WHOP_ENT_PRODUCT_ID && id === process.env.WHOP_ENT_PRODUCT_ID) return "ENTERPRISE";

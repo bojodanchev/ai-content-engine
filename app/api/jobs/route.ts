@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
           title: `AI Content Engine Export - ${new Date().toISOString()}`,
           comment: `job_id=${jobId}`,
           creation_time: new Date().toISOString()
-        });
+        }, { transformProfile: entitlements.plan === "FREE" ? "subtle" : "subtle" });
         const afterMeta = await extractMetadata(outputPath).catch(() => null);
 
         await db.job.update({ where: { id: jobId }, data: { status: "completed", outputFilename: path.basename(outputPath), metaJson: JSON.stringify({ before: beforeMeta, after: afterMeta, preset, priority: entitlements.features.priorityProcessing }), updatedAt: new Date() } });
