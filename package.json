@@ -26,7 +26,7 @@
     "@aws-sdk/s3-request-presigner": "^3.637.0",
     "@aws-sdk/s3-presigned-post": "^3.637.0",
     "@aws-sdk/client-sqs": "^3.637.0",
-    "@whop/react": "latest"
+    "@whop/react": "^0.2.36"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
@@ -40,8 +40,8 @@
   },
   "overrides": {
     "@whop/react": {
-      "react": "$react",
-      "react-dom": "$react-dom"
+      "react": "^18.3.1",
+      "react-dom": "^18.3.1"
     }
   }
 }
