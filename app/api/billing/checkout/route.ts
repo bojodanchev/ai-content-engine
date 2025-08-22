@@ -13,9 +13,9 @@ function resolvePlanId(plan: string) {
 }
 
 function buildCheckoutUrl(planId: string, userId: string) {
-  // Use query param style per payments docs; association via app_user_id
-  const qs = new URLSearchParams({ plan_id: planId, app_user_id: userId });
-  return `https://whop.com/checkout?${qs.toString()}`;
+  // Path style with d2c=true, plus app_user_id for association
+  const qs = new URLSearchParams({ d2c: "true", app_user_id: userId });
+  return `https://whop.com/checkout/${encodeURIComponent(planId)}?${qs.toString()}`;
 }
 
 export async function POST(req: NextRequest) {
