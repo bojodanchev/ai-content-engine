@@ -9,7 +9,18 @@
     "dev": "next dev",
     "build": "prisma generate && prisma db push --accept-data-loss && next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:auth": "playwright test auth.spec.ts",
+    "test:upload": "playwright test upload.spec.ts",
+    "test:dashboard": "playwright test dashboard.spec.ts",
+    "test:download": "playwright test download.spec.ts",
+    "test:billing": "playwright test billing.spec.ts",
+    "test:api": "playwright test api.spec.ts",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "ffmpeg-static": "^5.2.0",
@@ -29,6 +40,7 @@
     "@whop/iframe": "^0.0.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "autoprefixer": "^10.4.20",
     "prisma": "^5.18.0",
     "postcss": "^8.4.41",
