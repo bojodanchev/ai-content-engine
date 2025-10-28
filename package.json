@@ -23,32 +23,32 @@
     "test:report": "playwright show-report"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.637.0",
+    "@aws-sdk/client-sqs": "^3.637.0",
+    "@aws-sdk/s3-presigned-post": "^3.637.0",
+    "@aws-sdk/s3-request-presigner": "^3.637.0",
+    "@prisma/client": "^5.18.0",
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/blob": "^0.25.0",
+    "@whop/api": "^0.0.51",
+    "@whop/iframe": "^0.0.3",
     "ffmpeg-static": "^5.2.0",
     "ffprobe-static": "^3.1.0",
-    "@whop/api": "^0.0.51",
-    "@prisma/client": "^5.18.0",
-    "@vercel/blob": "^0.25.0",
     "jose": "^5.2.3",
     "lucide-react": "^0.453.0",
     "next": "^14.2.32",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@aws-sdk/client-s3": "^3.637.0",
-    "@aws-sdk/s3-request-presigner": "^3.637.0",
-    "@aws-sdk/s3-presigned-post": "^3.637.0",
-    "@aws-sdk/client-sqs": "^3.637.0",
-    "@whop/iframe": "^0.0.3"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
-    "autoprefixer": "^10.4.20",
-    "prisma": "^5.18.0",
-    "postcss": "^8.4.41",
-    "tailwindcss": "^3.4.12",
-    "typescript": "^5.6.2",
     "@types/node": "^20.14.11",
     "@types/react": "^18.3.5",
-    "@types/react-dom": "^18.3.0"
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.41",
+    "prisma": "^5.18.0",
+    "tailwindcss": "^3.4.12",
+    "typescript": "^5.6.2"
   }
 }
-

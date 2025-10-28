@@ -1,5 +1,6 @@
 import "../styles/globals.css";
 import type { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata = {
   title: "AI Content Engine",
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Load iFrame SDK when embedded; React wrapper removed due to peer constraints */}
         <script src="https://cdn.whop.com/iframe-sdk.js" async />
         {children}
+        <Analytics />
       </body>
     </html>
   );
