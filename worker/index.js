@@ -126,17 +126,22 @@ async function loop() {
       const res = await sqs.send(new ReceiveMessageCommand({ QueueUrl: QUEUE_URL, MaxNumberOfMessages: 1, WaitTimeSeconds: 20, VisibilityTimeout: 60 }));
       const msgs = res.Messages || [];
       for (const m of msgs) {
+        let jobId = null;
         try {
+          const { jobId: jid } = JSON.parse(m.Body);
+          jobId = jid;
           await handleMessage(m.Body);
           await sqs.send(new DeleteMessageCommand({ QueueUrl: QUEUE_URL, ReceiptHandle: m.ReceiptHandle }));
         } catch (e) {
           try {
-            await pg.query(
-              'update "Job" set status=$1, "updatedAt"=now(), "metaJson"=$2 where id=$3',
-              ['failed', JSON.stringify({ error: String(e) }), JSON.stringify(jobId).replace(/"/g,'').trim()]
-            );
+            if (jobId) {
+              await pg.query(
+                'update "Job" set status=$1, "updatedAt"=now(), "metaJson"=$2 where id=$3',
+                ['failed', JSON.stringify({ error: String(e) }), jobId]
+              );
+            }
           } catch (_) {}
-          console.error("[worker] job failed", e);
+          console.error("[worker] job failed", e, { jobId });
         }
       }
     } catch (e) {

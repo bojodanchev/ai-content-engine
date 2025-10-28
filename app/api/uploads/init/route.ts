@@ -54,14 +54,7 @@ export async function POST(req: NextRequest) {
     Expires: 3600,
   });
 
-  // Allow CORS from the app at the presign response level (frontend still needs bucket CORS)
-  const response = { ok: true, jobId, upload: policy } as const;
-  return new Response(JSON.stringify(response), {
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-  });
-  
-  // Note: job is created after presign so we return presign faster
-  // fire-and-forget DB writes
+  // Create database records before responding to ensure job tracking and quota accounting
   try {
     const db = getDb();
     await db.user.upsert({ where: { id: userId }, update: {}, create: { id: userId, username: null, avatarUrl: null } });
@@ -69,5 +62,12 @@ export async function POST(req: NextRequest) {
     await incrementMonthlyUsage(userId, 1);
   } catch (e) {
     console.error("[uploads/init] db error", e);
+    return Response.json({ error: "Database error during job creation" }, { status: 500 });
   }
+
+  // Allow CORS from the app at the presign response level (frontend still needs bucket CORS)
+  const response = { ok: true, jobId, upload: policy } as const;
+  return new Response(JSON.stringify(response), {
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+  });
 }

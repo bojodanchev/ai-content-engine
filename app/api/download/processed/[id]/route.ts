@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
+import { resolveUserIdOrCreateGuest } from "@/lib/whopAuth";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -9,9 +10,17 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const id = params.id;
   if (!id) return new Response("Missing id", { status: 400 });
+
+  // Verify user ownership
+  const userId = await resolveUserIdOrCreateGuest();
   const db = getDb();
   const job = await db.job.findUnique({ where: { id } }) as any;
   if (!job) return new Response("Not found", { status: 404 });
+
+  // Enforce ownership check - user can only download their own job's output
+  if (job.userId !== userId) {
+    return new Response("Unauthorized", { status: 403 });
+  }
 
   const region = process.env.AWS_REGION as string;
   const bucket = process.env.AWS_S3_BUCKET as string;
